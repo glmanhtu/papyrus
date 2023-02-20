@@ -1,0 +1,17 @@
+------------ Options -------------
+batch_size: 64
+checkpoints_dir: ./checkpoints
+dropout: 0.6
+image_size: 224
+is_train: True
+lr: 4e-05
+lr_decay_epochs: 8
+lr_policy: step
+max_patches_per_fragment: 5
+michigan_dir: /media/mvu/MVU_SSD/datasets/final_michigan_base_2_published
+n_threads_test: 8
+n_threads_train: 8
+name: experiment_1
+nepochs: 200
+optimizer: Adam
+-------------- End ----------------
