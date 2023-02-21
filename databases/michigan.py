@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import random
 import re
@@ -8,7 +9,11 @@ import cv2
 import torch
 from torch.utils.data import Dataset
 
+from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
+
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
 
 def get_papyrus_id(fragment):
@@ -77,23 +82,25 @@ class MichiganDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    def get_patch(self, img_list):
+        while len(img_list) > 0:
+            image_path = random.choice(img_list)
+            try:
+                img = read_image(image_path)
+                return data_utils.extract_random_patch(img, self.patch_size)
+            except PatchNotExtractableException:
+                logging.error(f"Could not extract patch from image {image_path}, retry another image...")
+                img_list.remove(image_path)
+        raise Exception('Could not extract any patch...')
+
     def __getitem__(self, idx):
         positive_list, anchor, negative_list = self.data[idx]
         positive_list = list(itertools.chain.from_iterable(positive_list))
         negative_list = list(itertools.chain.from_iterable(negative_list))
 
-        positive_img = random.choice(positive_list)
-        anchor_img = random.choice(anchor)
-        negative_img = random.choice(negative_list)
-
-        positive_img = read_image(positive_img)
-        positive_patch = data_utils.extract_random_patch(positive_img, self.patch_size)
-
-        anchor_img = read_image(anchor_img)
-        anchor_patch = data_utils.extract_random_patch(anchor_img, self.patch_size)
-
-        negative_img = read_image(negative_img)
-        negative_patch = data_utils.extract_random_patch(negative_img, self.patch_size)
+        positive_patch = self.get_patch(positive_list)
+        anchor_patch = self.get_patch(anchor)
+        negative_patch = self.get_patch(negative_list)
 
         return {
             "positive": self.transforms(torch.from_numpy(positive_patch)),

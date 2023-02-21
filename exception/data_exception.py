@@ -1,0 +1,2 @@
+class PatchNotExtractableException(Exception):
+    pass
