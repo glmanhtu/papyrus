@@ -135,3 +135,5 @@ resources/*.pth
 .git
 .DS_Store
 *.swp
+
+checkpoints
