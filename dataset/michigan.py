@@ -87,7 +87,7 @@ class MichiganDataset(Dataset):
             image_path = random.choice(img_list)
             try:
                 img = read_image(image_path)
-                return data_utils.extract_random_patch(img, self.patch_size)
+                return data_utils.extract_random_patch(img, self.patch_size), image_path
             except PatchNotExtractableException:
                 logging.error(f"Could not extract patch from image {image_path}, retry another image...")
                 img_list.remove(image_path)
@@ -98,15 +98,28 @@ class MichiganDataset(Dataset):
         positive_list = list(itertools.chain.from_iterable(positive_list))
         negative_list = list(itertools.chain.from_iterable(negative_list))
 
-        positive_patch = self.get_patch(positive_list)
-        anchor_patch = self.get_patch(anchor)
-        negative_patch = self.get_patch(negative_list)
+        positive_patch, pos_img_path = self.get_patch(positive_list)
+        positive_image = os.path.splitext(os.path.basename(pos_img_path))[0]
+        positive_papyrus_id = get_papyrus_id(positive_image)
+
+        anchor_patch, anc_img_path = self.get_patch(anchor)
+        anchor_image = os.path.splitext(os.path.basename(anc_img_path))[0]
+        anchor_papyrus_id = get_papyrus_id(anchor_image)
+
+        negative_patch, neg_img_path = self.get_patch(negative_list)
+        negative_image = os.path.splitext(os.path.basename(neg_img_path))[0]
+        negative_papyrus_id = get_papyrus_id(negative_image)
 
         return {
-            "positive": self.transforms(torch.from_numpy(positive_patch)),
-            "anchor": self.transforms(torch.from_numpy(anchor_patch)),
-            "negative": self.transforms(torch.from_numpy(negative_patch))
+            "positive": self.transforms(positive_patch),
+            "pos_image":  positive_image,
+            "pos_fragment": positive_papyrus_id,
+
+            "anchor": self.transforms(anchor_patch),
+            "anc_image": anchor_image,
+            "anc_fragment": anchor_papyrus_id,
+
+            "negative": self.transforms(negative_patch),
+            "neg_image": negative_image,
+            "neg_fragment": negative_papyrus_id
         }
-
-
-
