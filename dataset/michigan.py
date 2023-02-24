@@ -13,6 +13,7 @@ from utils.misc import get_papyrus_id
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
+excludes = ['4458br_22']
 
 def read_image(image_path):
     return cv2.cvtColor(cv2.imread(image_path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
@@ -42,6 +43,8 @@ class MichiganDataset(Dataset):
         for file in files:
             file_name = os.path.splitext(os.path.basename(file))[0]
             if only_recto and 'r' not in file_name.lower():
+                continue
+            if file_name in excludes:
                 continue
             papyrus_id = get_papyrus_id(file_name)
             if papyrus_id not in papyri:
