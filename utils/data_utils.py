@@ -49,7 +49,7 @@ def extract_random_patch(image, patch_size, background_threshold=0.8, max_retrie
     if patch_background_percentage > background_threshold:
         return extract_random_patch(image, patch_size, background_threshold, max_retries, current_retries + 1)
 
-    return cv2.bitwise_not(patch)
+    return patch
 
 
 def chunks(l, n):
