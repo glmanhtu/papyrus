@@ -1,9 +1,8 @@
 import random
 
 import torch
-import wandb
-
-from utils import wb_utils
+import seaborn as sns
+import matplotlib.pyplot as plt
 from utils.misc import compute_similarity_matrix, get_metrics
 
 
@@ -24,5 +23,9 @@ img_features = {
 }
 
 df = compute_similarity_matrix(img_features)
-wb_utils.heatmap(df.columns, df.index, df.to_numpy(), show_text=False)
+# Create the heatmap using seaborn
+sns.heatmap(df, cmap="YlGnBu")
+
+# Show the plot
+plt.show()
 map = get_metrics(df)
