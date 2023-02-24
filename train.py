@@ -29,7 +29,7 @@ class Trainer:
         device = torch.device('cuda' if args.cuda else 'cpu')
 
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=args.dropout)
-        transforms = get_transforms(args)
+        transforms = get_transforms()
         dataset_train = MichiganDataset(args.michigan_dir, transforms, patch_size=args.image_size, proportion=(0, 0.8),
                                         only_recto=True, min_fragments_per_papyrus=2)
         self.data_loader_train = DataLoader(dataset_train, shuffle=True, num_workers=args.n_threads_train,
@@ -124,7 +124,7 @@ class Trainer:
         self._model.set_eval()
         val_losses = []
         img_features, frag_features = {}, {}
-        for _ in range(2):
+        for _ in range(4):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)

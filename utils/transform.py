@@ -1,20 +1,12 @@
-import numpy as np
 import torchvision.transforms
 import torchvision.transforms
 from PIL import ImageOps
-from imgaug import augmenters as iaa
 from torchvision.transforms import transforms
 
 
-def get_transforms(args):
+def get_transforms():
     applying_percent = 0.3
-    sometimes = lambda aug: iaa.Sometimes(applying_percent, aug)
     return torchvision.transforms.Compose([
-        iaa.Sequential([
-            sometimes(iaa.GaussianBlur(sigma=(0.0, 0.1))),
-            sometimes(iaa.CoarseDropout(0.02, size_percent=0.5)),
-            sometimes(iaa.LinearContrast((0.4, 1.6)))
-        ]).augment_image,
         torchvision.transforms.ToPILImage(),
         torchvision.transforms.RandomApply([
             torchvision.transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3),
