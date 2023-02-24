@@ -1,5 +1,6 @@
 from model.model_wrapper import ModelWrapper
 from model.resnet18 import ResNet18
+from model.resnet50 import ResNet50
 
 
 class ModelsFactory:
@@ -10,6 +11,8 @@ class ModelsFactory:
     def get_model(args, is_train, device, dropout=0.4):
         if args.network == 'resnet18':
             model = ResNet18(dropout=dropout)
+        elif args.network == 'resnet50':
+            model = ResNet50(dropout=dropout)
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')
 
