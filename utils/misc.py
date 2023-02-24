@@ -71,7 +71,7 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
                 target_features = torch.stack(random.sample(data[target], n_items))
                 similarity = F.cosine_similarity(source_features, target_features, dim=0)
                 similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
-                similarities.append(similarity_percentage.mean())
+                similarities.append(similarity_percentage.mean().item())
 
             mean_similarity = sum(similarities) / len(similarities)
             similarity_map.setdefault(source, {})[target] = mean_similarity

@@ -1,7 +1,9 @@
 import random
 
 import torch
+import wandb
 
+from utils import wb_utils
 from utils.misc import compute_similarity_matrix, get_metrics
 
 
@@ -22,4 +24,5 @@ img_features = {
 }
 
 df = compute_similarity_matrix(img_features)
+wb_utils.heatmap(df.columns, df.index, df.to_numpy(), show_text=False)
 map = get_metrics(df)

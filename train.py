@@ -8,6 +8,7 @@ import wandb
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
+from utils import wb_utils
 from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, display_terminal_eval
 from utils.transform import get_transforms, val_transforms
 
@@ -131,11 +132,11 @@ class Trainer:
                 self.add_features(img_features, frag_features, batch['neg_image'], batch['neg_fragment'], neg_features)
 
         df = compute_similarity_matrix(frag_features)
-        wandb.log({'val_fragment_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)},
+        wandb.log({'val_fragment_level': wb_utils.heatmap(df.columns, df.index, df.to_numpy(), show_text=False)},
                   step=self._current_step)
 
         df = compute_similarity_matrix(img_features)
-        wandb.log({'val_img_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)},
+        wandb.log({'val_img_level': wb_utils.heatmap(df.columns, df.index, df.to_numpy(), show_text=False)},
                   step=self._current_step)
 
         m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df)
