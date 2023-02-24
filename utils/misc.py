@@ -77,7 +77,8 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
             similarity_map.setdefault(source, {})[target] = mean_similarity
             similarity_map.setdefault(target, {})[source] = mean_similarity
 
-    return pd.DataFrame.from_dict(similarity_map, orient='index')
+    matrix = pd.DataFrame.from_dict(similarity_map, orient='index').sort_index()
+    return matrix.reindex(sorted(matrix.columns), axis=1)
 
 
 def get_papyrus_id(fragment):
