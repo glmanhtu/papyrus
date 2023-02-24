@@ -88,7 +88,7 @@ class MichiganDataset(Dataset):
             except PatchNotExtractableException:
                 # logging.error(f"Could not extract patch from image {image_path}, retry another image...")
                 img_list.remove(image_path)
-        raise Exception('Could not extract any patch...')
+        raise Exception('Could not extract any patch. Last img: ' + img)
 
     def __getitem__(self, idx):
         positive_list, anchor, negative_list = self.data[idx]
