@@ -2,27 +2,28 @@ import gc
 import time
 
 import torch
-import wandb
 from torch.utils.data import DataLoader
 
+import wandb
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
-from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, compute_pr_a_k, \
-    display_terminal_eval
+from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, display_terminal_eval
 from utils.transform import get_transforms, val_transforms
 
 args = TrainOptions().parse()
 
+wandb.init(group=args.group,
+           project=args.wb_project,
+           entity=args.wb_entity,
+           mode=args.wb_mode)
+wandb.run.name = args.name
+wandb.run.save()
+wandb.config.update(args)
+
 
 class Trainer:
     def __init__(self):
-        # wandb.init(group=args.group,
-        #            project=args.wb_project,
-        #            entity=args.wb_entity)
-        # wandb.run.name = args.name
-        # wandb.run.save()
-        # wandb.config.update(args)
         device = torch.device('cuda' if args.cuda else 'cpu')
 
         self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=args.dropout)
@@ -43,12 +44,14 @@ class Trainer:
         print("Validating sets: {} images".format(len(dataset_val)))
 
         self._current_step = 0
-        if not self._model.existing():
-            self._train()
+
+    def is_trained(self):
+        return self._model.existing()
+
+    def load_pretrained_model(self):
         self._model.load()
 
-    def _train(self):
-        self._last_save_time = time.time()
+    def train(self):
         best_m_ap = 0.
         for i_epoch in range(1, args.nepochs + 1):
             epoch_start_time = time.time()
@@ -98,6 +101,7 @@ class Trainer:
                 save_dict = {
                     'train/loss': sum(losses) / len(losses),
                 }
+                losses.clear()
                 wandb.log(save_dict, step=self._current_step)
                 display_terminal(iter_start_time, i_epoch, i_train_batch, len(self.data_loader_train), save_dict)
 
@@ -127,10 +131,12 @@ class Trainer:
                 self.add_features(img_features, frag_features, batch['neg_image'], batch['neg_fragment'], neg_features)
 
         df = compute_similarity_matrix(frag_features)
-        wandb.log({'val_fragment_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)})
+        wandb.log({'val_fragment_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)},
+                  step=self._current_step)
 
         df = compute_similarity_matrix(img_features)
-        wandb.log({'val_img_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)})
+        wandb.log({'val_img_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)},
+                  step=self._current_step)
 
         m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df)
 
@@ -151,3 +157,6 @@ class Trainer:
 
 if __name__ == "__main__":
     trainer = Trainer()
+    if not trainer.is_trained():
+        trainer.train()
+    trainer.load_pretrained_model()
