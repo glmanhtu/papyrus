@@ -75,7 +75,7 @@ class MichiganDataset(Dataset):
                 img = read_image(image_path)
                 return data_utils.extract_random_patch(img, self.patch_size), image_path
             except PatchNotExtractableException:
-                logging.error(f"Could not extract patch from image {image_path}, retry another image...")
+                # logging.error(f"Could not extract patch from image {image_path}, retry another image...")
                 img_list.remove(image_path)
         raise Exception('Could not extract any patch...')
 
