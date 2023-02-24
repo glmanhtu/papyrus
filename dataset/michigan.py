@@ -80,15 +80,16 @@ class MichiganDataset(Dataset):
         return len(self.data)
 
     def get_patch(self, img_list):
+        img = ''
         while len(img_list) > 0:
             image_path = random.choice(img_list)
+            img = read_image(image_path)
             try:
-                img = read_image(image_path)
                 return data_utils.extract_random_patch(img, self.patch_size), image_path
             except PatchNotExtractableException:
                 # logging.error(f"Could not extract patch from image {image_path}, retry another image...")
                 img_list.remove(image_path)
-        raise Exception('Could not extract any patch. Last img: ' + img)
+        raise Exception(f'Could not extract any patch. Last img: {img}')
 
     def __getitem__(self, idx):
         positive_list, anchor, negative_list = self.data[idx]
