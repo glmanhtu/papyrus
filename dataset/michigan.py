@@ -18,6 +18,17 @@ def read_image(image_path):
     return cv2.cvtColor(cv2.imread(image_path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
 
 
+def split_chunks(data, n_chunks=(2, 4)):
+    min_chunk, max_chunks = n_chunks
+    middle = (min_chunk + max_chunks) // 2
+    if len(data) > max_chunks * 2:
+        return data_utils.chunks(data, max_chunks)
+    elif len(data) > middle:
+        return data_utils.chunks(data, middle)
+    else:
+        return data_utils.chunks(data, min_chunk)
+
+
 class MichiganDataset(Dataset):
 
     def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8),
@@ -50,7 +61,7 @@ class MichiganDataset(Dataset):
 
         # Re-balance fragments
         for k, v in list(papyri.items()):
-            papyri[k] = list(data_utils.chunks(papyri[k], min_fragments_per_papyrus))
+            papyri[k] = list(split_chunks(papyri[k]))
 
         self.patch_size = patch_size
 

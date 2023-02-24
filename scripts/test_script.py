@@ -3,7 +3,7 @@ import random
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
-from utils.misc import compute_similarity_matrix, get_metrics
+from utils.misc import compute_distance_matrix, get_metrics
 
 
 def generate_random_features(size):
@@ -22,10 +22,6 @@ img_features = {
     '57r_1': generate_random_features(128)
 }
 
-df = compute_similarity_matrix(img_features)
-# Create the heatmap using seaborn
-sns.heatmap(df, cmap="YlGnBu")
+df = compute_distance_matrix(img_features)
 
-# Show the plot
-plt.show()
 map = get_metrics(df)

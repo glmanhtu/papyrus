@@ -12,7 +12,7 @@ def wb_img(image):
     return wandb.Image(reverse_transform()(image))
 
 
-def create_similarity_heatmap(similarity_matrix, dpi=200):
+def create_distance_heatmap(similarity_matrix, dpi=200):
     # Create the heatmap using seaborn
     heatmap = sns.heatmap(similarity_matrix, cmap="YlGnBu")
 

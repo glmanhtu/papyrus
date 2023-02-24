@@ -8,10 +8,9 @@ import wandb
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
-from utils import wb_utils
-from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, display_terminal_eval
+from utils.misc import EarlyStop, display_terminal, compute_distance_matrix, get_metrics, display_terminal_eval
 from utils.transform import get_transforms, val_transforms
-from utils.wb_utils import create_similarity_heatmap
+from utils.wb_utils import create_distance_heatmap
 
 args = TrainOptions().parse()
 
@@ -124,7 +123,7 @@ class Trainer:
         self._model.set_eval()
         val_losses = []
         img_features, frag_features = {}, {}
-        for _ in range(4):
+        for _ in range(3):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)
@@ -132,11 +131,11 @@ class Trainer:
                 self.add_features(img_features, frag_features, batch['anc_image'], batch['anc_fragment'], anc_features)
                 self.add_features(img_features, frag_features, batch['neg_image'], batch['neg_fragment'], neg_features)
 
-        df = compute_similarity_matrix(frag_features)
-        wandb.log({'val_fragment_level': wandb.Image(create_similarity_heatmap(df))}, step=self._current_step)
+        df = compute_distance_matrix(frag_features)
+        wandb.log({'val_fragment_level': wandb.Image(create_distance_heatmap(df))}, step=self._current_step)
 
-        df = compute_similarity_matrix(img_features)
-        wandb.log({'val_image_level': wandb.Image(create_similarity_heatmap(df))}, step=self._current_step)
+        df = compute_distance_matrix(img_features)
+        wandb.log({'val_image_level': wandb.Image(create_distance_heatmap(df))}, step=self._current_step)
 
         m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df)
 
