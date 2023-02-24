@@ -2,30 +2,16 @@ import glob
 import logging
 import os
 import random
-import re
 import itertools
 
 import cv2
-import torch
 from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
-
+from utils.misc import get_papyrus_id
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
-
-
-def get_papyrus_id(fragment):
-    papyrus_id = fragment.split('_')[0]
-
-    tmp = re.search('[A-z]', papyrus_id)
-
-    if tmp is not None:
-        index_first_character = re.search('[A-z]', papyrus_id).start()
-        papyrus_id = papyrus_id[:index_first_character]
-
-    return papyrus_id
 
 
 def read_image(image_path):

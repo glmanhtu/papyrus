@@ -1,11 +1,16 @@
 import random
+import re
 import time
 from typing import Dict, List
+
+import numpy as np
 import torch.nn.functional as F
 
 import torch
 from torch import Tensor
 import pandas as pd
+
+from utils import wi19_evaluate
 
 
 class EarlyStop:
@@ -66,7 +71,7 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
                 target_features = torch.stack(random.sample(data[target], n_items))
                 similarity = F.cosine_similarity(source_features, target_features, dim=0)
                 similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
-                similarities.append(similarity_percentage)
+                similarities.append(similarity_percentage.mean())
 
             mean_similarity = sum(similarities) / len(similarities)
             similarity_map.setdefault(source, {})[target] = mean_similarity
@@ -75,9 +80,37 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
     return pd.DataFrame.from_dict(similarity_map, orient='index')
 
 
-def compute_map(similarity_matrix):
-    return 0
+def get_papyrus_id(fragment):
+    papyrus_id = fragment.split('_')[0]
+
+    tmp = re.search('[A-z]', papyrus_id)
+
+    if tmp is not None:
+        index_first_character = re.search('[A-z]', papyrus_id).start()
+        papyrus_id = papyrus_id[:index_first_character]
+
+    return papyrus_id
 
 
-def compute_pr_a_k(similarity_matrix, k):
-    return 0
+def get_metrics(similarity_matrix):
+    papyrus_ids = [get_papyrus_id(x) for x in similarity_matrix.index]
+    papyrus_set_indexes = list(set(papyrus_ids))
+    papyrus_ids = [papyrus_set_indexes.index(x) for x in papyrus_ids]
+    precision_at, recall_at, sorted_retrievals = wi19_evaluate.get_precision_recall_matrices(
+        similarity_matrix.to_numpy(), np.array(papyrus_ids), remove_self_column=False)
+
+    non_singleton_idx = sorted_retrievals.sum(axis=1) > 0
+    mAP = wi19_evaluate.compute_map(precision_at[non_singleton_idx, :], sorted_retrievals[non_singleton_idx, :])
+    top_1 = sorted_retrievals[:, 0].sum() / len(sorted_retrievals)
+    pr_a_k10 = compute_pr_a_k(sorted_retrievals, 10)
+    pr_a_k100 = compute_pr_a_k(sorted_retrievals, 100)
+    # roc = wi19_evaluate.compute_roc(sorted_retrievals)
+    return mAP, top_1, pr_a_k10, pr_a_k100
+
+
+def compute_pr_a_k(sorted_retrievals, k):
+    pr_a_k = sorted_retrievals[:, :k].sum(axis=1) / np.minimum(sorted_retrievals.sum(axis=1), k)
+    return pr_a_k.sum() / len(pr_a_k)
+
+
+

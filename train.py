@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
-from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, compute_map, compute_pr_a_k, \
+from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, compute_pr_a_k, \
     display_terminal_eval
 from utils.transform import get_transforms, val_transforms
 
@@ -49,7 +49,7 @@ class Trainer:
 
     def _train(self):
         self._last_save_time = time.time()
-        best_val_loss = 99999
+        best_m_ap = 0.
         for i_epoch in range(1, args.nepochs + 1):
             epoch_start_time = time.time()
             self._model.get_current_lr()
@@ -64,10 +64,10 @@ class Trainer:
             val_dict = self._validate(i_epoch, self.data_loader_val)
             gc.collect()
 
-            current_loss = val_dict['val/loss_footprint']
-            if current_loss < best_val_loss:
-                print("Footprint val loss improved, from {:.4f} to {:.4f}".format(best_val_loss, current_loss))
-                best_val_loss = current_loss
+            current_m_ap = val_dict['val/m_ap']
+            if current_m_ap > best_m_ap:
+                print("mAP improved, from {:.4f} to {:.4f}".format(best_m_ap, current_m_ap))
+                best_m_ap = current_m_ap
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
@@ -77,7 +77,7 @@ class Trainer:
             print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                   (i_epoch, args.nepochs, time_epoch, time_epoch / 60, time_epoch / 3600))
 
-            if self.early_stop.should_stop(current_loss):
+            if self.early_stop.should_stop(1 - current_m_ap):
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
@@ -132,13 +132,12 @@ class Trainer:
         df = compute_similarity_matrix(img_features)
         wandb.log({'val_img_level': wandb.plots.HeatMap(df.columns, df.index, df.to_numpy(), show_text=False)})
 
-        m_ap = compute_map(df)
-        pr_a_k10 = compute_pr_a_k(df, k=10)
-        pr_a_k100 = compute_pr_a_k(df, k=100)
+        m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df)
 
         val_dict = {
             'val/loss': sum(val_losses) / len(val_losses),
             'val/m_ap': m_ap,
+            'val/top_1': top1,
             'val/pr_a_k10': pr_a_k10,
             'val/pr_a_k100': pr_a_k100
         }
