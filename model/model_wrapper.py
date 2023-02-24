@@ -11,7 +11,7 @@ from utils.misc import map_location
 class ModelWrapper:
     def __init__(self, args, model, is_train, device):
         self._name = args.name
-        self._model = model
+        self._model = model.to(device)
         self._args = args
         self._is_train = is_train
         self._save_dir = os.path.join(self._args.checkpoints_dir, self.name)
