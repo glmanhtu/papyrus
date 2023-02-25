@@ -69,7 +69,7 @@ def compute_distance_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
             for _ in range(n_times):
                 source_features = torch.stack(random.sample(data[source], n_items))
                 target_features = torch.stack(random.sample(data[target], n_items))
-                similarity = F.cosine_similarity(source_features, target_features, dim=0)
+                similarity = F.cosine_similarity(source_features, target_features, dim=1)
                 similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
                 distances.append(similarity_percentage.mean().item())
 
