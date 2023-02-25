@@ -60,7 +60,6 @@ def display_terminal_eval(iter_start_time, i_epoch, eval_dict):
 def compute_distance_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
     distance_map = {}
     fragments = list(data.keys())
-    distance_fuc = torch.nn.MSELoss()
     for i in range(len(fragments)):
         for j in range(i, len(fragments)):
             source, target = fragments[i], fragments[j]
@@ -70,8 +69,9 @@ def compute_distance_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
             for _ in range(n_times):
                 source_features = torch.stack(random.sample(data[source], n_items))
                 target_features = torch.stack(random.sample(data[target], n_items))
-                distance = distance_fuc(source_features, target_features)
-                distances.append(distance.item())
+                similarity = F.cosine_similarity(source_features, target_features, dim=0)
+                similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
+                distances.append(similarity_percentage.mean().item())
 
             mean_distance = sum(distances) / len(distances)
             distance_map.setdefault(source, {})[target] = mean_distance
