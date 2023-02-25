@@ -156,6 +156,6 @@ class Trainer:
 
 if __name__ == "__main__":
     trainer = Trainer()
-    if not trainer.is_trained():
-        trainer.train()
-    trainer.load_pretrained_model()
+    if trainer.is_trained():
+        trainer.load_pretrained_model()
+    trainer.train()
