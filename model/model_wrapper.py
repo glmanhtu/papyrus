@@ -1,5 +1,5 @@
 import os
-
+import torch.nn.functional as F
 import numpy as np
 import torch
 from torch import nn
@@ -111,14 +111,19 @@ class ModelWrapper:
         anchor_images = batch_data['anchor'].to(self._device, non_blocking=True)
         negative_images = batch_data['negative'].to(self._device, non_blocking=True)
 
-        criteria = nn.TripletMarginLoss(margin=0.2)
+        criteria = nn.TripletMarginWithDistanceLoss(
+            distance_function=lambda x, y: 1.0 - F.cosine_similarity(x, y, dim=1), margin=0.2)
         with torch.set_grad_enabled(self._is_train):
             pos_features = self._model(positive_images)
             anc_features = self._model(anchor_images)
             neg_features = self._model(negative_images)
 
-            loss = criteria(anc_features, pos_features, neg_features)
-            return loss, (pos_features, anc_features, neg_features)
+            # Normalise the features
+            pos_norm = F.normalize(pos_features, p=2, dim=1)
+            anc_norm = F.normalize(anc_features, p=2, dim=1)
+            neg_norm = F.normalize(neg_features, p=2, dim=1)
+            loss = criteria(anc_norm, pos_norm, neg_norm)
+            return loss, (pos_norm, anc_norm, neg_norm)
 
     def optimise_params(self, loss):
         self._optimizer.zero_grad()
