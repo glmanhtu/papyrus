@@ -112,7 +112,7 @@ class ModelWrapper:
         negative_images = batch_data['negative'].to(self._device, non_blocking=True)
 
         criteria = nn.TripletMarginWithDistanceLoss(
-            distance_function=lambda x, y: 1.0 - F.cosine_similarity(x, y), margin=0.2)
+            distance_function=lambda x, y: 1.0 - F.cosine_similarity(x, y, dim=1), margin=0.2)
         with torch.set_grad_enabled(self._is_train):
             pos_features = self._model(positive_images)
             anc_features = self._model(anchor_images)
@@ -123,7 +123,7 @@ class ModelWrapper:
             anc_norm = F.normalize(anc_features, p=2, dim=1)
             neg_norm = F.normalize(neg_features, p=2, dim=1)
             loss = criteria(anc_norm, pos_norm, neg_norm)
-            return loss, (anc_norm, pos_norm, neg_norm)
+            return loss, (pos_norm, anc_norm, neg_norm)
 
     def optimise_params(self, loss):
         self._optimizer.zero_grad()
