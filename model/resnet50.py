@@ -28,7 +28,7 @@ class ResNet50(nn.Module):
             nn.Linear(1024, 512),
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Linear(512, 256)
+            nn.Linear(512, 128)
         )
 
     def forward(self, x):

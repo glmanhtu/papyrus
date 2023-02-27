@@ -1,4 +1,5 @@
 import gc
+import os.path
 import time
 
 import torch
@@ -8,9 +9,9 @@ import wandb
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
-from utils.misc import EarlyStop, display_terminal, compute_distance_matrix, get_metrics, display_terminal_eval
+from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, display_terminal_eval
 from utils.transform import get_transforms, val_transforms
-from utils.wb_utils import create_distance_heatmap
+from utils.wb_utils import create_heatmap
 
 args = TrainOptions().parse()
 
@@ -65,7 +66,7 @@ class Trainer:
             if not i_epoch % args.n_epochs_per_eval == 0:
                 continue
 
-            val_dict = self._validate(i_epoch, self.data_loader_val)
+            val_dict, similarity_matrix, similarity_matrix_papyrus = self._validate(i_epoch, self.data_loader_val)
             gc.collect()
 
             current_m_ap = val_dict['val/m_ap']
@@ -75,6 +76,9 @@ class Trainer:
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
+                similarity_matrix.to_csv(os.path.join(args.checkpoints_dir, 'similarity_matrix.csv'), encoding='utf-8')
+                similarity_matrix_papyrus.to_csv(os.path.join(args.checkpoints_dir, 'similarity_matrix_papy.csv'),
+                                                 encoding='utf-8')
 
             # print epoch info
             time_epoch = time.time() - epoch_start_time
@@ -122,20 +126,20 @@ class Trainer:
         # set model to eval
         self._model.set_eval()
         val_losses = []
-        img_features, frag_features = {}, {}
+        img_features, papy_features = {}, {}
         for _ in range(3):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)
-                self.add_features(img_features, frag_features, batch['pos_image'], batch['pos_fragment'], pos_features)
-                self.add_features(img_features, frag_features, batch['anc_image'], batch['anc_fragment'], anc_features)
-                self.add_features(img_features, frag_features, batch['neg_image'], batch['neg_fragment'], neg_features)
+                self.add_features(img_features, papy_features, batch['pos_image'], batch['pos_fragment'], pos_features)
+                self.add_features(img_features, papy_features, batch['anc_image'], batch['anc_fragment'], anc_features)
+                self.add_features(img_features, papy_features, batch['neg_image'], batch['neg_fragment'], neg_features)
 
-        df = compute_distance_matrix(frag_features)
-        wandb.log({'val_fragment_level': wandb.Image(create_distance_heatmap(df))}, step=self._current_step)
+        df_papy = compute_similarity_matrix(papy_features)
+        wandb.log({'similarity_papyrus_level': wandb.Image(create_heatmap(df_papy))}, step=self._current_step)
 
-        df = compute_distance_matrix(img_features)
-        wandb.log({'val_image_level': wandb.Image(create_distance_heatmap(df))}, step=self._current_step)
+        df = compute_similarity_matrix(img_features)
+        wandb.log({'similarity_fragment_level': wandb.Image(create_heatmap(df))}, step=self._current_step)
 
         m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df)
 
@@ -151,7 +155,7 @@ class Trainer:
 
         # set model back to train
         self._model.set_train()
-        return val_dict
+        return val_dict, df, df_papy
 
 
 if __name__ == "__main__":

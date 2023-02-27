@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import wandb
 from matplotlib import pyplot as plt
@@ -12,7 +13,7 @@ def wb_img(image):
     return wandb.Image(reverse_transform()(image))
 
 
-def create_distance_heatmap(similarity_matrix, dpi=200):
+def create_heatmap(similarity_matrix: pd.DataFrame, dpi=200):
     # Create the heatmap using seaborn
     heatmap = sns.heatmap(similarity_matrix, cmap="YlGnBu")
 

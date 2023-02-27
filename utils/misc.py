@@ -57,27 +57,27 @@ def display_terminal_eval(iter_start_time, i_epoch, eval_dict):
     print(output + "\n")
 
 
-def compute_distance_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
-    distance_map = {}
+def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
+    similarity_map = {}
     fragments = list(data.keys())
     for i in range(len(fragments)):
         for j in range(i, len(fragments)):
             source, target = fragments[i], fragments[j]
             n_items = min(len(data[source]), len(data[target]))
             n_times = max((len(data[source]) + len(data[target])) // 2, n_times_testing)
-            distances = []
+            similarities = []
             for _ in range(n_times):
                 source_features = F.normalize(torch.stack(random.sample(data[source], n_items)), p=2, dim=1)
                 target_features = F.normalize(torch.stack(random.sample(data[target], n_items)), p=2, dim=1)
                 similarity = F.cosine_similarity(source_features, target_features, dim=1)
                 similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
-                distances.append(1 - similarity_percentage)
+                similarities.append(similarity_percentage)
 
-            mean_distance = torch.concat(distances, dim=0).mean().item()
-            distance_map.setdefault(source, {})[target] = mean_distance
-            distance_map.setdefault(target, {})[source] = mean_distance
+            mean_similarity = torch.concat(similarities, dim=0).mean().item()
+            similarity_map.setdefault(source, {})[target] = mean_similarity
+            similarity_map.setdefault(target, {})[source] = mean_similarity
 
-    matrix = pd.DataFrame.from_dict(distance_map, orient='index').sort_index()
+    matrix = pd.DataFrame.from_dict(similarity_map, orient='index').sort_index()
     return matrix.reindex(sorted(matrix.columns), axis=1)
 
 
@@ -97,8 +97,9 @@ def get_metrics(similarity_matrix):
     papyrus_ids = [get_papyrus_id(x) for x in similarity_matrix.index]
     papyrus_set_indexes = list(set(papyrus_ids))
     papyrus_ids = [papyrus_set_indexes.index(x) for x in papyrus_ids]
+    distance_matrix = 1 - similarity_matrix.to_numpy()
     precision_at, recall_at, sorted_retrievals = wi19_evaluate.get_precision_recall_matrices(
-        similarity_matrix.to_numpy(), np.array(papyrus_ids), remove_self_column=False)
+        distance_matrix, np.array(papyrus_ids), remove_self_column=False)
 
     non_singleton_idx = sorted_retrievals.sum(axis=1) > 0
     mAP = wi19_evaluate.compute_map(precision_at[non_singleton_idx, :], sorted_retrievals[non_singleton_idx, :])
