@@ -20,7 +20,7 @@ def generate_query_table(query_result, top_k=25):
 
     record = ['Query img']
     for query in query_result:
-        img = add_description(query['query_img'], 'Similarity: - ', query)
+        img = add_description(query['query_img'], 'Similarity: - ', query['query'])
         record.append(wandb.Image(img))
     data.append(record)
 
