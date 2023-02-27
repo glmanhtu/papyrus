@@ -93,7 +93,7 @@ def random_query_results(similarity_matrix, dataset, n_queries=5, top_k=25):
             'results': []
         }
         similarity_result = similarity_matrix[query]
-        for target, similarity in similarity_result.iteritems():
+        for target, similarity in similarity_result.items():
             query_result['results'].append({
                 'target': target,
                 'target_img': None,

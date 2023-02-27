@@ -27,7 +27,8 @@ def generate_query_table(query_result, top_k=25):
         record = [f'#{idx + 1}']
         for query in query_result:
             target = query['results'][idx]
-            img = add_description(target['target_img'], target['similarity'], target['target'])
+            bottom_desc = 'Similarity {:.4f}'.format(target['similarity'])
+            img = add_description(target['target_img'], bottom_desc, target['target'])
             record.append(wandb.Image(img))
         data.append(record)
     return wandb.Table(data=data, columns=columns)
