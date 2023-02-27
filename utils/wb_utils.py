@@ -4,6 +4,7 @@ import seaborn as sns
 import wandb
 from matplotlib import pyplot as plt
 
+from utils.misc import add_description
 from utils.transform import reverse_transform
 
 chart_limit = wandb.Table.MAX_ROWS
@@ -11,6 +12,25 @@ chart_limit = wandb.Table.MAX_ROWS
 
 def wb_img(image):
     return wandb.Image(reverse_transform()(image))
+
+
+def generate_query_table(query_result, top_k=25):
+    columns = ["Desc"] + [f'query #{i + 1}' for i in range(len(query_result))]
+    data = []
+
+    record = ['Query img']
+    for query in query_result:
+        record.append(wandb.Image(query['query_img']))
+    data.append(record)
+
+    for idx in range(top_k):
+        record = [f'#{idx + 1}']
+        for query in query_result:
+            target = query['results'][idx]
+            img = add_description(target['target_img'], target['similarity'], target['target'])
+            record.append(wandb.Image(img))
+        data.append(record)
+    return wandb.Table(data=data, columns=columns)
 
 
 def create_heatmap(similarity_matrix: pd.DataFrame, dpi=200):

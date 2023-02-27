@@ -82,6 +82,10 @@ class MichiganDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    def get_patch_by_id(self, img_id):
+        img_path = os.path.join(self.dataset_path, f"{img_id}.png")
+        return self.get_patch([img_path])[0]
+
     def get_patch(self, img_list):
         image_path = ''
         while len(img_list) > 0:

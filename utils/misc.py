@@ -3,6 +3,7 @@ import re
 import time
 from typing import Dict, List
 
+import cv2
 import numpy as np
 import torch.nn.functional as F
 
@@ -81,6 +82,32 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
     return matrix.reindex(sorted(matrix.columns), axis=1)
 
 
+def random_query_results(similarity_matrix, dataset, n_queries=5, top_k=25):
+    papyrus_set_indexes = list(set(similarity_matrix.index))
+    fragment_queries = random.sample(papyrus_set_indexes, n_queries)
+    result = []
+    for query in fragment_queries:
+        query_result = {
+            'query': query,
+            'query_img': dataset.get_patch_by_id(query),
+            'results': []
+        }
+        similarity_result = similarity_matrix[query]
+        for target, similarity in similarity_result.iteritems():
+            query_result['results'].append({
+                'target': target,
+                'target_img': None,
+                'similarity': similarity,
+            })
+        top_k_similarities = sorted(query_result['results'], key=lambda x: x['similarity'], reverse=True)
+        query_result['results'] = top_k_similarities[:top_k]
+        for item in query_result['results']:
+            item['target_img'] = dataset.get_patch_by_id(item['target'])
+
+        result.append(query_result)
+    return result
+
+
 def get_papyrus_id(fragment):
     papyrus_id = fragment.split('_')[0]
 
@@ -115,4 +142,22 @@ def compute_pr_a_k(sorted_retrievals, k):
     return pr_a_k.sum() / len(pr_a_k)
 
 
+def add_description(in_img, bottom_description, left_description):
+    white = [255, 255, 255]
+    height, width, depth = in_img.shape
 
+    font = cv2.FONT_HERSHEY_COMPLEX_SMALL
+    font_scale = 1
+    font_color = (0, 0, 0)
+    thickness = 1
+    line_type = cv2.LINE_AA
+    in_img = cv2.copyMakeBorder(in_img, 0, 20, 20, 0, cv2.BORDER_CONSTANT, value=white)
+
+    in_img = cv2.rotate(in_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    cv2.putText(in_img, left_description,
+                (10, height + 15), font, font_scale, font_color, thickness, line_type)
+    in_img = cv2.rotate(in_img, cv2.ROTATE_90_CLOCKWISE)
+
+    cv2.putText(in_img, bottom_description,
+                (10, height + 15), font, font_scale, font_color, thickness, line_type)
+    return in_img

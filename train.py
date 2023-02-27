@@ -9,7 +9,9 @@ import wandb
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
-from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, display_terminal_eval
+from utils import wb_utils
+from utils.misc import EarlyStop, display_terminal, compute_similarity_matrix, get_metrics, display_terminal_eval, \
+    random_query_results
 from utils.transform import get_transforms, val_transforms
 from utils.wb_utils import create_heatmap
 
@@ -79,6 +81,10 @@ class Trainer:
                 self._model.save()  # save best model
                 df.to_csv(os.path.join(self._working_dir, 'similarity_matrix.csv'), encoding='utf-8')
                 df_papyrus.to_csv(os.path.join(self._working_dir, 'similarity_matrix_papy.csv'), encoding='utf-8')
+
+                query_results = random_query_results(df, self.data_loader_val.dataset, n_queries=5, top_k=25)
+                wandb.log({'best_model_prediction': wb_utils.generate_query_table(query_results, top_k=25)},
+                          step=self._current_step)
 
             # print epoch info
             time_epoch = time.time() - epoch_start_time

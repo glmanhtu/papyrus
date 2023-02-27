@@ -3,7 +3,7 @@ import random
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
-from utils.misc import compute_similarity_matrix, get_metrics
+from utils.misc import compute_similarity_matrix, get_metrics, random_query_results
 
 
 def generate_random_features(size):
@@ -23,5 +23,6 @@ img_features = {
 }
 
 df = compute_similarity_matrix(img_features)
+random_query_results(df, None, n_queries=3)
 
 map = get_metrics(df)
