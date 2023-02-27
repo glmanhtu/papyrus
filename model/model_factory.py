@@ -8,7 +8,7 @@ class ModelsFactory:
         pass
 
     @staticmethod
-    def get_model(args, is_train, device, dropout=0.4):
+    def get_model(args, working_dir, is_train, device, dropout=0.4):
         if args.network == 'resnet18':
             model = ResNet18(dropout=dropout)
         elif args.network == 'resnet50':
@@ -16,5 +16,5 @@ class ModelsFactory:
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')
 
-        model = ModelWrapper(args, model, is_train, device)
+        model = ModelWrapper(args, working_dir, model, is_train, device)
         return model

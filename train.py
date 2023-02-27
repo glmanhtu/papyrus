@@ -28,7 +28,9 @@ class Trainer:
     def __init__(self):
         device = torch.device('cuda' if args.cuda else 'cpu')
 
-        self._model = ModelsFactory.get_model(args, is_train=True, device=device, dropout=args.dropout)
+        self._working_dir = os.path.join(args.checkpoints_dir, args.name)
+        self._model = ModelsFactory.get_model(args, self._working_dir, is_train=True, device=device,
+                                              dropout=args.dropout)
         transforms = get_transforms()
         dataset_train = MichiganDataset(args.michigan_dir, transforms, patch_size=args.image_size, proportion=(0, 0.8),
                                         only_recto=True, min_fragments_per_papyrus=2)
@@ -66,8 +68,7 @@ class Trainer:
             if not i_epoch % args.n_epochs_per_eval == 0:
                 continue
 
-            val_dict, similarity_matrix, similarity_matrix_papyrus = self._validate(i_epoch, self.data_loader_val)
-            gc.collect()
+            val_dict, df, df_papyrus = self._validate(i_epoch, self.data_loader_val)
 
             current_m_ap = val_dict['val/m_ap']
             if current_m_ap > best_m_ap:
@@ -76,9 +77,8 @@ class Trainer:
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
-                similarity_matrix.to_csv(os.path.join(args.checkpoints_dir, 'similarity_matrix.csv'), encoding='utf-8')
-                similarity_matrix_papyrus.to_csv(os.path.join(args.checkpoints_dir, 'similarity_matrix_papy.csv'),
-                                                 encoding='utf-8')
+                df.to_csv(os.path.join(self._working_dir, 'similarity_matrix.csv'), encoding='utf-8')
+                df_papyrus.to_csv(os.path.join(self._working_dir, 'similarity_matrix_papy.csv'), encoding='utf-8')
 
             # print epoch info
             time_epoch = time.time() - epoch_start_time
