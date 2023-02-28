@@ -73,7 +73,7 @@ class Trainer:
         test_dict, df = self._validate(0, self.data_loader_test, n_time_validates=25)
         df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
 
-        query_results = random_query_results(df, self.data_loader_val.dataset, n_queries=5, top_k=25)
+        query_results = random_query_results(df, self.data_loader_test.dataset, n_queries=5, top_k=25)
         wandb.log({'best_model_prediction': wb_utils.generate_query_table(query_results, top_k=25)},
                   step=self._current_step)
 
