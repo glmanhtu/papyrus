@@ -65,8 +65,9 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
         for j in range(i, len(fragments)):
             source, target = fragments[i], fragments[j]
             n_items = min(len(data[source]), len(data[target]))
+            n_times = max((len(data[source]) + len(data[target])) // 2, n_times_testing)
             source_features, target_features = [], []
-            for _ in range(n_times_testing):
+            for _ in range(n_times):
                 source_features += random.sample(data[source], n_items)
                 target_features += random.sample(data[target], n_items)
             source_features = F.normalize(torch.stack(source_features), p=2, dim=1)

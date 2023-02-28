@@ -23,7 +23,7 @@ wandb.init(group=args.group,
            id=args.name,
            project=args.wb_project,
            entity=args.wb_entity,
-           resume=True,
+           resume=args.resume,
            config=args,
            mode=args.wb_mode)
 
@@ -178,9 +178,15 @@ class Trainer:
 
 if __name__ == "__main__":
     trainer = Trainer()
+    if trainer.is_trained():
+        trainer.load_pretrained_model()
+
+    if args.resume:
+        trainer.set_current_step(wandb.run.step)
+        trainer.train()
+
     if not trainer.is_trained():
         trainer.train()
-    if wandb.run.resumed:
-        trainer.set_current_step(wandb.run.step)
+
     trainer.load_pretrained_model()
     trainer.test()

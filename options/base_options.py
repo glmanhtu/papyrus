@@ -19,6 +19,7 @@ class BaseOptions:
         self._parser.add_argument('--batch_size', type=int, default=64, help='Input batch size')
         self._parser.add_argument('--optimizer', type=str, default='Adam')
         self._parser.add_argument('--cuda', action='store_true', help="Whether to use GPU")
+        self._parser.add_argument('--resume', action='store_true', help="Whether to use GPU")
         self._parser.add_argument('--network', type=str, default='resnet18')
         self._parser.add_argument('--save_freq_iter', type=int, default=10,
                                   help='save the training losses to the summary writer every # iterations')
