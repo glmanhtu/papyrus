@@ -19,13 +19,13 @@ from utils.wb_utils import create_heatmap
 args = TrainOptions().parse()
 
 wandb.init(group=args.group,
+           name=args.name,
+           id=args.name,
            project=args.wb_project,
            entity=args.wb_entity,
            resume=True,
+           config=args,
            mode=args.wb_mode)
-wandb.run.name = args.name
-wandb.run.save()
-wandb.config.update(args)
 
 
 class Trainer:
@@ -152,13 +152,14 @@ class Trainer:
         self._model.set_eval()
         val_losses = []
         img_features, papy_features = {}, {}
-        for _ in range(n_time_validates):
+        for i in range(n_time_validates):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)
                 self.add_features(img_features, papy_features, batch['pos_image'], batch['pos_fragment'], pos_features)
                 self.add_features(img_features, papy_features, batch['anc_image'], batch['anc_fragment'], anc_features)
                 self.add_features(img_features, papy_features, batch['neg_image'], batch['neg_fragment'], neg_features)
+            print(f'Finished the evaluating {i + 1}/{n_time_validates}')
 
         df_papy = compute_similarity_matrix(papy_features)
         wandb.log({'similarity_papyrus_level': wandb.Image(create_heatmap(df_papy))}, step=self._current_step)
