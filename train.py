@@ -70,7 +70,7 @@ class Trainer:
 
     def test(self):
         print('Starting to test...')
-        test_dict, df = self._validate(0, self.data_loader_test, n_time_validates=25)
+        test_dict, df = self._validate(0, self.data_loader_test, mode='test', n_time_validates=25)
         df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
 
         query_results = random_query_results(df, self.data_loader_test.dataset, n_queries=5, top_k=25)
@@ -143,7 +143,7 @@ class Trainer:
                 img_features[image_name] = []
             img_features[image_name].append(feature_cpu)
 
-    def _validate(self, i_epoch, val_loader, n_time_validates=3):
+    def _validate(self, i_epoch, val_loader, mode='val', n_time_validates=3):
         val_start_time = time.time()
         # set model to eval
         self._model.set_eval()
@@ -164,11 +164,11 @@ class Trainer:
         m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(similar_df, val_loader.dataset.get_papyrus_id)
 
         val_dict = {
-            'val/loss': sum(val_losses) / len(val_losses),
-            'val/m_ap': m_ap,
-            'val/top_1': top1,
-            'val/pr_a_k10': pr_a_k10,
-            'val/pr_a_k100': pr_a_k100
+            f'{mode}/loss': sum(val_losses) / len(val_losses),
+            f'{mode}/m_ap': m_ap,
+            f'{mode}/top_1': top1,
+            f'{mode}/pr_a_k10': pr_a_k10,
+            f'{mode}/pr_a_k100': pr_a_k100
         }
         wandb.log(val_dict, step=self._current_step)
         display_terminal_eval(val_start_time, i_epoch, val_dict)
