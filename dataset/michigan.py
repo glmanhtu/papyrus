@@ -1,22 +1,19 @@
 import glob
+import itertools
 import logging
 import os
 import random
-import itertools
 
-import cv2
 from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
+from utils.data_utils import read_image
 from utils.misc import get_papyrus_id
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
 excludes = ['4458br_22']
-
-def read_image(image_path):
-    return cv2.cvtColor(cv2.imread(image_path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
 
 
 def split_chunks(data, n_chunks=(2, 4)):

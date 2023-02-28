@@ -56,3 +56,7 @@ def chunks(l, n):
     """Yield n number of striped chunks from l."""
     for i in range(0, n):
         yield l[i::n]
+
+
+def read_image(image_path):
+    return cv2.cvtColor(cv2.imread(image_path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

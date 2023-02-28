@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import torchvision.transforms
 
+from dataset.Infrared import InfraredDataset
 from dataset.michigan import MichiganDataset
 from options.train_options import TrainOptions
 
@@ -13,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: 
 args = TrainOptions(save_conf=False).parse()
 transforms = torchvision.transforms.Compose([])
 
-train_dataset = MichiganDataset(args.michigan_dir, transforms, args.image_size)
+train_dataset = InfraredDataset(args.infrared_dir, transforms, args.image_size)
 
 for item in train_dataset:
     image = np.concatenate([item['positive'], item['anchor'], item['negative']], axis=0)
