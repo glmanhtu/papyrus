@@ -70,7 +70,7 @@ class Trainer:
 
     def test(self):
         print('Starting to test...')
-        test_dict, df, _ = self._validate(0, self.data_loader_test, n_time_validates=10)
+        test_dict, df, _ = self._validate(0, self.data_loader_test, n_time_validates=25)
         df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
 
         query_results = random_query_results(df, self.data_loader_val.dataset, n_queries=5, top_k=25)
