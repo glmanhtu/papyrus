@@ -10,7 +10,6 @@ from torch.utils.data import Dataset
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
 from utils.data_utils import read_image
-from utils.misc import get_papyrus_id
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
@@ -32,7 +31,7 @@ def extract_relations(dataset_path):
 
     groups = []
 
-    for dir_name in os.listdir(dataset_path):
+    for dir_name in sorted(os.listdir(dataset_path)):
         name_components = dir_name.split("_")
         fragment_ids = [get_fragment_id(x) for x in name_components]
         reference_group = None
@@ -53,7 +52,8 @@ def extract_relations(dataset_path):
 
 
 class InfraredDataset(Dataset):
-    def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8), only_recto=True):
+    def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 1),
+                 only_recto=True):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
 
@@ -69,10 +69,10 @@ class InfraredDataset(Dataset):
         papyri = {}
         for file in files:
             file_name = os.path.splitext(os.path.basename(file))[0]
-            if only_recto and 'COLR' not in file_name.lower():
+            if only_recto and 'COLR' not in file_name:
                 continue
 
-            papyrus_id = get_papyrus_id(file_name)
+            papyrus_id = self.get_papyrus_id(file_name)
             if papyrus_id not in papyri:
                 papyri[papyrus_id] = []
             papyri[papyrus_id].append(file)
@@ -82,9 +82,8 @@ class InfraredDataset(Dataset):
         d_size = len(papyrus_ids)
         self.ids = papyrus_ids[int(d_size * p_from):int(d_size * p_to)]
 
-        # Re-balance fragments
         for k, v in list(papyri.items()):
-            papyri[k] = list(split_chunks(papyri[k]))
+            papyri[k] = [[x] for x in papyri[k]]
 
         self.patch_size = patch_size
 
@@ -102,6 +101,10 @@ class InfraredDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    def get_papyrus_id(self, file_name):
+        fragment_name = file_name.rsplit('_', 1)[0]     # Remove _COLR, _COLV, etc
+        fragment_ids = [get_fragment_id(x) for x in fragment_name.split('_')]
+        return self.fragment_ids[fragment_ids[0]]
 
     def get_patch_by_id(self, img_id):
         img_path = os.path.join(self.dataset_path, f"{img_id}.png")
@@ -126,15 +129,15 @@ class InfraredDataset(Dataset):
 
         positive_patch, pos_img_path = self.get_patch(positive_list)
         positive_image = os.path.splitext(os.path.basename(pos_img_path))[0]
-        positive_papyrus_id = get_papyrus_id(positive_image)
+        positive_papyrus_id = self.get_papyrus_id(positive_image)
 
         anchor_patch, anc_img_path = self.get_patch(anchor)
         anchor_image = os.path.splitext(os.path.basename(anc_img_path))[0]
-        anchor_papyrus_id = get_papyrus_id(anchor_image)
+        anchor_papyrus_id = self.get_papyrus_id(anchor_image)
 
         negative_patch, neg_img_path = self.get_patch(negative_list)
         negative_image = os.path.splitext(os.path.basename(neg_img_path))[0]
-        negative_papyrus_id = get_papyrus_id(negative_image)
+        negative_papyrus_id = self.get_papyrus_id(negative_image)
 
         return {
             "positive": self.transforms(positive_patch),

@@ -108,19 +108,7 @@ def random_query_results(similarity_matrix, dataset, n_queries=5, top_k=25):
     return result
 
 
-def get_papyrus_id(fragment):
-    papyrus_id = fragment.split('_')[0]
-
-    tmp = re.search('[A-z]', papyrus_id)
-
-    if tmp is not None:
-        index_first_character = re.search('[A-z]', papyrus_id).start()
-        papyrus_id = papyrus_id[:index_first_character]
-
-    return papyrus_id
-
-
-def get_metrics(similarity_matrix):
+def get_metrics(similarity_matrix, get_papyrus_id):
     papyrus_ids = [get_papyrus_id(x) for x in similarity_matrix.index]
     papyrus_set_indexes = list(set(papyrus_ids))
     papyrus_ids = [papyrus_set_indexes.index(x) for x in papyrus_ids]

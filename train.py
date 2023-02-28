@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 import wandb
+from dataset.infrared import InfraredDataset
 from dataset.michigan import MichiganDataset
 from model.model_factory import ModelsFactory
 from options.train_options import TrainOptions
@@ -45,9 +46,15 @@ class Trainer:
         self.data_loader_val = DataLoader(dataset_val, shuffle=False, num_workers=args.n_threads_test,
                                           batch_size=args.batch_size)
 
+        dataset_test = InfraredDataset(args.infrared_dir, transforms, patch_size=args.image_size, proportion=(0, 1),
+                                       only_recto=True)
+        self.data_loader_test = DataLoader(dataset_test, shuffle=False, num_workers=args.n_threads_test,
+                                           batch_size=args.batch_size)
+
         self.early_stop = EarlyStop(args.early_stop)
         print("Training sets: {} images".format(len(dataset_train)))
         print("Validating sets: {} images".format(len(dataset_val)))
+        print("Test sets: {} images".format(len(dataset_test)))
 
         self._current_step = 0
 
@@ -56,6 +63,14 @@ class Trainer:
 
     def load_pretrained_model(self):
         self._model.load()
+
+    def test(self):
+        test_dict, df, _ = self._validate(0, self.data_loader_test, n_time_validates=25)
+        df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
+
+        query_results = random_query_results(df, self.data_loader_val.dataset, n_queries=5, top_k=25)
+        wandb.log({'best_model_prediction': wb_utils.generate_query_table(query_results, top_k=25)},
+                  step=self._current_step)
 
     def train(self):
         best_m_ap = 0.
@@ -127,13 +142,13 @@ class Trainer:
                 fragment_features[fragment] = []
             fragment_features[fragment].append(feature_cpu)
 
-    def _validate(self, i_epoch, val_loader):
+    def _validate(self, i_epoch, val_loader, n_time_validates=3):
         val_start_time = time.time()
         # set model to eval
         self._model.set_eval()
         val_losses = []
         img_features, papy_features = {}, {}
-        for _ in range(3):
+        for _ in range(n_time_validates):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)
@@ -147,7 +162,7 @@ class Trainer:
         df = compute_similarity_matrix(img_features)
         wandb.log({'similarity_fragment_level': wandb.Image(create_heatmap(df))}, step=self._current_step)
 
-        m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df)
+        m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df, val_loader.dataset.get_papyrus_id)
 
         val_dict = {
             'val/loss': sum(val_losses) / len(val_losses),
@@ -166,6 +181,7 @@ class Trainer:
 
 if __name__ == "__main__":
     trainer = Trainer()
-    if trainer.is_trained():
-        trainer.load_pretrained_model()
-    trainer.train()
+    if not trainer.is_trained():
+        trainer.train()
+    trainer.load_pretrained_model()
+    trainer.test()

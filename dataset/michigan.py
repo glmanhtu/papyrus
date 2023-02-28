@@ -3,17 +3,29 @@ import itertools
 import logging
 import os
 import random
+import re
 
 from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
 from utils.data_utils import read_image, minmax_split_chunks
-from utils.misc import get_papyrus_id
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
 excludes = ['4458br_22']
+
+
+def get_papyrus_id(fragment):
+    papyrus_id = fragment.split('_')[0]
+
+    tmp = re.search('[A-z]', papyrus_id)
+
+    if tmp is not None:
+        index_first_character = re.search('[A-z]', papyrus_id).start()
+        papyrus_id = papyrus_id[:index_first_character]
+
+    return papyrus_id
 
 
 class MichiganDataset(Dataset):
@@ -64,6 +76,7 @@ class MichiganDataset(Dataset):
 
         self.data = data
         self.transforms = transforms
+        self.get_papyrus_id = get_papyrus_id
 
     def __len__(self):
         return len(self.data)
@@ -91,15 +104,15 @@ class MichiganDataset(Dataset):
 
         positive_patch, pos_img_path = self.get_patch(positive_list)
         positive_image = os.path.splitext(os.path.basename(pos_img_path))[0]
-        positive_papyrus_id = get_papyrus_id(positive_image)
+        positive_papyrus_id = self.get_papyrus_id(positive_image)
 
         anchor_patch, anc_img_path = self.get_patch(anchor)
         anchor_image = os.path.splitext(os.path.basename(anc_img_path))[0]
-        anchor_papyrus_id = get_papyrus_id(anchor_image)
+        anchor_papyrus_id = self.get_papyrus_id(anchor_image)
 
         negative_patch, neg_img_path = self.get_patch(negative_list)
         negative_image = os.path.splitext(os.path.basename(neg_img_path))[0]
-        negative_papyrus_id = get_papyrus_id(negative_image)
+        negative_papyrus_id = self.get_papyrus_id(negative_image)
 
         return {
             "positive": self.transforms(positive_patch),

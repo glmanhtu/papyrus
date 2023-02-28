@@ -18,7 +18,7 @@ train_dataset = InfraredDataset(args.infrared_dir, transforms, args.image_size)
 
 for item in train_dataset:
     image = np.concatenate([item['positive'], item['anchor'], item['negative']], axis=0)
-    image = cv2.bitwise_not(image)
+    # image = cv2.bitwise_not(image)
     cv2.imshow('image', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
     # waitKey() waits for a key press to close the window and 0 specifies indefinite loop
