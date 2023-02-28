@@ -20,7 +20,7 @@ args = TrainOptions().parse()
 
 wandb.init(group=args.group,
            name=args.name,
-           id=args.name,
+           id=args.wb_run_id,
            project=args.wb_project,
            entity=args.wb_entity,
            resume=True,
