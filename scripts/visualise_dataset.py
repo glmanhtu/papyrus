@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import torchvision.transforms
 
-from dataset.Infrared import InfraredDataset
+from dataset.infrared import InfraredDataset
 from dataset.michigan import MichiganDataset
 from options.train_options import TrainOptions
 

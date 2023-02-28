@@ -30,14 +30,26 @@ def extract_relations(dataset_path):
     @param dataset_path:
     """
 
-    relation_map = {}
+    groups = []
 
     for dir_name in os.listdir(dataset_path):
         name_components = dir_name.split("_")
-        for name in name_components:
-            fragment_id = get_fragment_id(name)
-            relation_map.setdefault(fragment_id, set([])).add(name)
-    return relation_map
+        fragment_ids = [get_fragment_id(x) for x in name_components]
+        reference_group = None
+        for group in groups:
+            for fragment_id in fragment_ids:
+                if fragment_id in group:
+                    reference_group = group
+                    break
+            if reference_group is not None:
+                break
+        if reference_group is not None:
+            for fragment_id in fragment_ids:
+                reference_group.add(fragment_id)
+        else:
+            groups.append(set(fragment_ids))
+
+    return groups
 
 
 class InfraredDataset(Dataset):
@@ -45,7 +57,11 @@ class InfraredDataset(Dataset):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
 
-        relation_map = extract_relations(dataset_path)
+        self.groups = extract_relations(dataset_path)
+        self.fragment_ids = {}
+        for idx, group in enumerate(self.groups):
+            for fragment_id in group:
+                self.fragment_ids[fragment_id] = idx
 
         image_pattern = os.path.join(dataset_path, '**', '*.png')
         files = glob.glob(image_pattern, recursive=True)
@@ -55,6 +71,7 @@ class InfraredDataset(Dataset):
             file_name = os.path.splitext(os.path.basename(file))[0]
             if only_recto and 'COLR' not in file_name.lower():
                 continue
+
             papyrus_id = get_papyrus_id(file_name)
             if papyrus_id not in papyri:
                 papyri[papyrus_id] = []
@@ -84,6 +101,7 @@ class InfraredDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
 
     def get_patch_by_id(self, img_id):
         img_path = os.path.join(self.dataset_path, f"{img_id}.png")
