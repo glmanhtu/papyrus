@@ -70,7 +70,7 @@ class Trainer:
 
     def test(self):
         print('Starting to test...')
-        test_dict, df, _ = self._validate(0, self.data_loader_test, n_time_validates=25)
+        test_dict, df = self._validate(0, self.data_loader_test, n_time_validates=25)
         df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
 
         query_results = random_query_results(df, self.data_loader_val.dataset, n_queries=5, top_k=25)
@@ -90,7 +90,7 @@ class Trainer:
             if not i_epoch % args.n_epochs_per_eval == 0:
                 continue
 
-            val_dict, df, df_papyrus = self._validate(i_epoch, self.data_loader_val)
+            val_dict, similar_df = self._validate(i_epoch, self.data_loader_val)
 
             current_m_ap = val_dict['val/m_ap']
             if current_m_ap > best_m_ap:
@@ -99,10 +99,9 @@ class Trainer:
                 for key in val_dict:
                     wandb.run.summary[f'best_model/{key}'] = val_dict[key]
                 self._model.save()  # save best model
-                df.to_csv(os.path.join(self._working_dir, 'similarity_matrix.csv'), encoding='utf-8')
-                df_papyrus.to_csv(os.path.join(self._working_dir, 'similarity_matrix_papy.csv'), encoding='utf-8')
+                similar_df.to_csv(os.path.join(self._working_dir, 'similarity_matrix.csv'), encoding='utf-8')
 
-                query_results = random_query_results(df, self.data_loader_val.dataset, n_queries=5, top_k=25)
+                query_results = random_query_results(similar_df, self.data_loader_val.dataset, n_queries=5, top_k=25)
                 wandb.log({'best_model_prediction': wb_utils.generate_query_table(query_results, top_k=25)},
                           step=self._current_step)
 
@@ -137,38 +136,32 @@ class Trainer:
                 display_terminal(iter_start_time, i_epoch, i_train_batch, len(self.data_loader_train), save_dict)
 
     @staticmethod
-    def add_features(img_features, fragment_features, images, fragments, features):
-        for image_name, fragment, features in zip(images, fragments, features):
+    def add_features(img_features, images, features):
+        for image_name, features in zip(images, features):
             feature_cpu = features.cpu()
             if image_name not in img_features:
                 img_features[image_name] = []
             img_features[image_name].append(feature_cpu)
-            if fragment not in fragment_features:
-                fragment_features[fragment] = []
-            fragment_features[fragment].append(feature_cpu)
 
     def _validate(self, i_epoch, val_loader, n_time_validates=3):
         val_start_time = time.time()
         # set model to eval
         self._model.set_eval()
         val_losses = []
-        img_features, papy_features = {}, {}
+        img_features = {}
         for i in range(n_time_validates):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)
-                self.add_features(img_features, papy_features, batch['pos_image'], batch['pos_fragment'], pos_features)
-                self.add_features(img_features, papy_features, batch['anc_image'], batch['anc_fragment'], anc_features)
-                self.add_features(img_features, papy_features, batch['neg_image'], batch['neg_fragment'], neg_features)
+                self.add_features(img_features, batch['pos_image'], pos_features)
+                self.add_features(img_features, batch['anc_image'], anc_features)
+                self.add_features(img_features, batch['neg_image'], neg_features)
             print(f'Finished the evaluating {i + 1}/{n_time_validates}')
 
-        df_papy = compute_similarity_matrix(papy_features)
-        wandb.log({'similarity_papyrus_level': wandb.Image(create_heatmap(df_papy))}, step=self._current_step)
+        similar_df = compute_similarity_matrix(img_features)
+        wandb.log({'similarity_fragment_level': wandb.Image(create_heatmap(similar_df))}, step=self._current_step)
 
-        df = compute_similarity_matrix(img_features)
-        wandb.log({'similarity_fragment_level': wandb.Image(create_heatmap(df))}, step=self._current_step)
-
-        m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(df, val_loader.dataset.get_papyrus_id)
+        m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(similar_df, val_loader.dataset.get_papyrus_id)
 
         val_dict = {
             'val/loss': sum(val_losses) / len(val_losses),
@@ -180,9 +173,7 @@ class Trainer:
         wandb.log(val_dict, step=self._current_step)
         display_terminal_eval(val_start_time, i_epoch, val_dict)
 
-        # set model back to train
-        self._model.set_train()
-        return val_dict, df, df_papy
+        return val_dict, similar_df
 
 
 if __name__ == "__main__":
