@@ -69,6 +69,7 @@ class Trainer:
         self._model.load()
 
     def test(self):
+        print('Starting to test...')
         test_dict, df, _ = self._validate(0, self.data_loader_test, n_time_validates=10)
         df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
 
