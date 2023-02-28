@@ -8,23 +8,12 @@ from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
-from utils.data_utils import read_image
+from utils.data_utils import read_image, minmax_split_chunks
 from utils.misc import get_papyrus_id
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
 excludes = ['4458br_22']
-
-
-def split_chunks(data, n_chunks=(2, 4)):
-    min_chunk, max_chunks = n_chunks
-    middle = (min_chunk + max_chunks) // 2
-    if len(data) > max_chunks * 2:
-        return data_utils.chunks(data, max_chunks)
-    elif len(data) > middle:
-        return data_utils.chunks(data, middle)
-    else:
-        return data_utils.chunks(data, min_chunk)
 
 
 class MichiganDataset(Dataset):
@@ -61,7 +50,7 @@ class MichiganDataset(Dataset):
 
         # Re-balance fragments
         for k, v in list(papyri.items()):
-            papyri[k] = list(split_chunks(papyri[k]))
+            papyri[k] = list(minmax_split_chunks(papyri[k]))
 
         self.patch_size = patch_size
 

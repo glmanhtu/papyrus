@@ -60,3 +60,14 @@ def chunks(l, n):
 
 def read_image(image_path):
     return cv2.cvtColor(cv2.imread(image_path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+
+
+def minmax_split_chunks(data, n_chunks=(2, 4)):
+    min_chunk, max_chunks = n_chunks
+    middle = (min_chunk + max_chunks) // 2
+    if len(data) > max_chunks * 2:
+        return chunks(data, max_chunks)
+    elif len(data) > middle * 2:
+        return chunks(data, middle)
+    else:
+        return chunks(data, min_chunk)
