@@ -14,6 +14,7 @@ class BaseOptions:
 
     def initialize(self):
         self._parser.add_argument('--michigan_dir', type=str, help='Path to the michigan dataset')
+        self._parser.add_argument('--infrared_dir', type=str, help='Path to the infrared dataset')
         self._parser.add_argument('--image_size', type=int, default=224, help='Input image size')
         self._parser.add_argument('--batch_size', type=int, default=64, help='Input batch size')
         self._parser.add_argument('--optimizer', type=str, default='Adam')
