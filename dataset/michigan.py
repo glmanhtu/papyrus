@@ -104,26 +104,20 @@ class MichiganDataset(Dataset):
 
         positive_patch, pos_img_path = self.get_patch(positive_list)
         positive_image = os.path.splitext(os.path.basename(pos_img_path))[0]
-        positive_papyrus_id = self.get_papyrus_id(positive_image)
 
         anchor_patch, anc_img_path = self.get_patch(anchor)
         anchor_image = os.path.splitext(os.path.basename(anc_img_path))[0]
-        anchor_papyrus_id = self.get_papyrus_id(anchor_image)
 
         negative_patch, neg_img_path = self.get_patch(negative_list)
         negative_image = os.path.splitext(os.path.basename(neg_img_path))[0]
-        negative_papyrus_id = self.get_papyrus_id(negative_image)
 
         return {
             "positive": self.transforms(positive_patch),
             "pos_image":  positive_image,
-            "pos_fragment": positive_papyrus_id,
 
             "anchor": self.transforms(anchor_patch),
             "anc_image": anchor_image,
-            "anc_fragment": anchor_papyrus_id,
 
             "negative": self.transforms(negative_patch),
             "neg_image": negative_image,
-            "neg_fragment": negative_papyrus_id
         }
