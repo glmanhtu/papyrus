@@ -21,6 +21,7 @@ args = TrainOptions().parse()
 wandb.init(group=args.group,
            project=args.wb_project,
            entity=args.wb_entity,
+           resume=True,
            mode=args.wb_mode)
 wandb.run.name = args.name
 wandb.run.save()
@@ -60,6 +61,9 @@ class Trainer:
 
     def is_trained(self):
         return self._model.existing()
+
+    def set_current_step(self, step):
+        self._current_step = step
 
     def load_pretrained_model(self):
         self._model.load()
@@ -183,5 +187,7 @@ if __name__ == "__main__":
     trainer = Trainer()
     if not trainer.is_trained():
         trainer.train()
+    if wandb.run.resumed:
+        trainer.set_current_step(wandb.run.step)
     trainer.load_pretrained_model()
     trainer.test()
