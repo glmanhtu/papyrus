@@ -35,6 +35,8 @@ class BaseOptions:
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         self._parser.add_argument('--lr', type=float, default=6e-5,
                                   help="The initial learning rate")
+        self._parser.add_argument('--triplet_margin', type=float, default=0.2,
+                                  help="Margin value for the TripletMarginLoss")
         self._parser.add_argument('--dropout', type=float, default=0.5, help="Default learning rate")
         self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=100,
