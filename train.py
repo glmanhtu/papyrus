@@ -122,7 +122,7 @@ class Trainer:
 
             train_loss, _ = self._model.compute_loss(train_batch)
             self._model.optimise_params(train_loss)
-            losses.append(train_loss.item())
+            losses.append(train_loss.item() + 1)
 
             # update epoch info
             self._current_step += 1
@@ -152,7 +152,7 @@ class Trainer:
         for i in range(n_time_validates):
             for i_train_batch, batch in enumerate(val_loader):
                 val_loss, (pos_features, anc_features) = self._model.compute_loss(batch)
-                val_losses.append(val_loss)
+                val_losses.append(val_loss.item() + 1)
                 self.add_features(img_features, batch['pos_image'], pos_features)
                 self.add_features(img_features, batch['anc_image'], anc_features)
             print(f'Finished the evaluating {i + 1}/{n_time_validates}')
