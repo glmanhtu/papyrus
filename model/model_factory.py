@@ -17,7 +17,7 @@ class ModelsFactory:
         elif args.network == 'resnet50':
             model = ResNet50(dropout=dropout)
         elif args.network == 'simsiam':
-            model = simsiam.SimSiam(models.__dict__['resnet50'], dim=128, pred_dim=512)
+            model = simsiam.SimSiam(models.__dict__['resnet50'], dim=512, pred_dim=2048)
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')
 
