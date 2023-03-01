@@ -106,7 +106,7 @@ class ModelWrapper:
         anchor_images = batch_data['anchor'].to(self._device, non_blocking=True)
         negative_images = batch_data['negative'].to(self._device, non_blocking=True)
 
-        criteria = nn.TripletMarginLoss(margin=0.2)
+        criteria = nn.TripletMarginLoss(margin=self._args.triplet_margin)
         with torch.set_grad_enabled(self._is_train):
             pos_features = self._model(positive_images)
             anc_features = self._model(anchor_images)

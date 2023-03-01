@@ -66,15 +66,16 @@ def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
             source, target = fragments[i], fragments[j]
             n_items = min(len(data[source]), len(data[target]))
             n_times = max((len(data[source]) + len(data[target])) // 2, n_times_testing)
-            similarities = []
+            source_features, target_features = [], []
             for _ in range(n_times):
-                source_features = F.normalize(torch.stack(random.sample(data[source], n_items)), p=2, dim=1)
-                target_features = F.normalize(torch.stack(random.sample(data[target], n_items)), p=2, dim=1)
-                similarity = F.cosine_similarity(source_features, target_features, dim=1)
-                similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
-                similarities.append(similarity_percentage)
+                source_features += random.sample(data[source], n_items)
+                target_features += random.sample(data[target], n_items)
+            source_features = F.normalize(torch.stack(source_features), p=2, dim=1)
+            target_features = F.normalize(torch.stack(target_features), p=2, dim=1)
+            similarity = F.cosine_similarity(source_features, target_features, dim=1)
+            similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
 
-            mean_similarity = torch.concat(similarities, dim=0).mean().item()
+            mean_similarity = similarity_percentage.mean().item()
             similarity_map.setdefault(source, {})[target] = mean_similarity
             similarity_map.setdefault(target, {})[source] = mean_similarity
 
@@ -108,19 +109,7 @@ def random_query_results(similarity_matrix, dataset, n_queries=5, top_k=25):
     return result
 
 
-def get_papyrus_id(fragment):
-    papyrus_id = fragment.split('_')[0]
-
-    tmp = re.search('[A-z]', papyrus_id)
-
-    if tmp is not None:
-        index_first_character = re.search('[A-z]', papyrus_id).start()
-        papyrus_id = papyrus_id[:index_first_character]
-
-    return papyrus_id
-
-
-def get_metrics(similarity_matrix):
+def get_metrics(similarity_matrix, get_papyrus_id):
     papyrus_ids = [get_papyrus_id(x) for x in similarity_matrix.index]
     papyrus_set_indexes = list(set(papyrus_ids))
     papyrus_ids = [papyrus_set_indexes.index(x) for x in papyrus_ids]
