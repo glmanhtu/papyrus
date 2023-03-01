@@ -1,19 +1,17 @@
 import glob
-import itertools
 import logging
 import os
-import random
 import re
 
 from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
-from utils.data_utils import read_image, minmax_split_chunks
+from utils.data_utils import read_image
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
-excludes = ['4458br_22']
+excludes = ['4458br_22', '102r_25', '102r_29', '102r_27']
 
 
 def get_papyrus_id(fragment):
@@ -30,8 +28,7 @@ def get_papyrus_id(fragment):
 
 class MichiganDataset(Dataset):
 
-    def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8),
-                 only_recto=True, min_fragments_per_papyrus=2):
+    def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8), only_recto=True):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
         image_pattern = os.path.join(dataset_path, '**', '*.png')
@@ -50,8 +47,6 @@ class MichiganDataset(Dataset):
             papyri[papyrus_id].append(file)
 
         for k, v in list(papyri.items()):
-            if len(v) < min_fragments_per_papyrus:
-                del papyri[k]
             if k == '':
                 del papyri[k]
 
@@ -59,24 +54,17 @@ class MichiganDataset(Dataset):
         p_from, p_to = proportion
         d_size = len(papyrus_ids)
         self.ids = papyrus_ids[int(d_size * p_from):int(d_size * p_to)]
-
-        # Re-balance fragments
-        for k, v in list(papyri.items()):
-            papyri[k] = list(minmax_split_chunks(papyri[k]))
-
         self.patch_size = patch_size
 
         data = []
         for papyrus_id in self.ids:
-            for anchor in papyri[papyrus_id]:
-                positive_list = papyri[papyrus_id]
-                negative_list = [papyri[x] for x in self.ids if x != papyrus_id]
-                negative_list = list(itertools.chain.from_iterable(negative_list))
-                data.append((positive_list, anchor, negative_list))
+            for img in papyri[papyrus_id]:
+                data.append(img)
 
         self.data = data
         self.transforms = transforms
         self.get_papyrus_id = get_papyrus_id
+        self.bad_imgs = []
 
     def __len__(self):
         return len(self.data)
@@ -85,39 +73,24 @@ class MichiganDataset(Dataset):
         img_path = os.path.join(self.dataset_path, f"{img_id}.png")
         return self.get_patch([img_path])[0]
 
-    def get_patch(self, img_list):
-        image_path = ''
-        while len(img_list) > 0:
-            image_path = random.choice(img_list)
-            try:
-                img = read_image(image_path)
-                return data_utils.extract_random_patch(img, self.patch_size), image_path
-            except PatchNotExtractableException:
-                # logging.error(f"Could not extract patch from image {image_path}, retry another image...")
-                img_list.remove(image_path)
-        raise Exception('Could not extract any patch. Last img: ' + image_path)
+    def get_patch(self, image_path):
+        img = read_image(image_path)
+        return data_utils.extract_random_patch(img, self.patch_size)
 
     def __getitem__(self, idx):
-        positive_list, anchor, negative_list = self.data[idx]
-        positive_list = list(itertools.chain.from_iterable(positive_list))
-        negative_list = list(itertools.chain.from_iterable(negative_list))
+        img_path = self.data[idx]
+        positive_image = os.path.splitext(os.path.basename(img_path))[0]
+        try:
+            positive_patch = self.get_patch(img_path)
 
-        positive_patch, pos_img_path = self.get_patch(positive_list)
-        positive_image = os.path.splitext(os.path.basename(pos_img_path))[0]
+            anchor_patch = self.get_patch(img_path)
 
-        anchor_patch, anc_img_path = self.get_patch(anchor)
-        anchor_image = os.path.splitext(os.path.basename(anc_img_path))[0]
+            return {
+                "positive": self.transforms(positive_patch),
+                "pos_image":  positive_image,
 
-        negative_patch, neg_img_path = self.get_patch(negative_list)
-        negative_image = os.path.splitext(os.path.basename(neg_img_path))[0]
-
-        return {
-            "positive": self.transforms(positive_patch),
-            "pos_image":  positive_image,
-
-            "anchor": self.transforms(anchor_patch),
-            "anc_image": anchor_image,
-
-            "negative": self.transforms(negative_patch),
-            "neg_image": negative_image,
-        }
+                "anchor": self.transforms(anchor_patch),
+                "anc_image": positive_image,
+            }
+        except PatchNotExtractableException:
+            self.bad_imgs.append(positive_image)

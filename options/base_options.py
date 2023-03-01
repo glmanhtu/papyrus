@@ -16,11 +16,11 @@ class BaseOptions:
         self._parser.add_argument('--michigan_dir', type=str, help='Path to the michigan dataset')
         self._parser.add_argument('--infrared_dir', type=str, help='Path to the infrared dataset')
         self._parser.add_argument('--image_size', type=int, default=224, help='Input image size')
-        self._parser.add_argument('--batch_size', type=int, default=64, help='Input batch size')
+        self._parser.add_argument('--batch_size', type=int, default=32, help='Input batch size')
         self._parser.add_argument('--optimizer', type=str, default='Adam')
         self._parser.add_argument('--cuda', action='store_true', help="Whether to use GPU")
         self._parser.add_argument('--resume', action='store_true', help="Whether to use GPU")
-        self._parser.add_argument('--network', type=str, default='resnet18')
+        self._parser.add_argument('--network', type=str, default='simsiam')
         self._parser.add_argument('--save_freq_iter', type=int, default=10,
                                   help='save the training losses to the summary writer every # iterations')
         self._parser.add_argument('--n_threads_train', default=8, type=int, help='# threads for loading data')
@@ -33,12 +33,12 @@ class BaseOptions:
         self._parser.add_argument('--wb_entity', type=str, default='glmanhtu', help='Wandb entity name')
         self._parser.add_argument('--wb_project', type=str, default='papyrus', help='Wandb project')
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
-        self._parser.add_argument('--lr', type=float, default=6e-5,
+        self._parser.add_argument('--lr', type=float, default=4e-4,
                                   help="The initial learning rate")
         self._parser.add_argument('--triplet_margin', type=float, default=0.2,
                                   help="Margin value for the TripletMarginLoss")
         self._parser.add_argument('--dropout', type=float, default=0.5, help="Default learning rate")
-        self._parser.add_argument('--lr_policy', type=str, default='step', choices=['step'])
+        self._parser.add_argument('--lr_policy', type=str, default='none', choices=['step', 'none'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=100,
                                   help='reduce the lr to 0.1*lr for every # epochs')
         self._parser.add_argument('--n_epochs_per_eval', type=int, default=5,

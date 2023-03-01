@@ -28,7 +28,9 @@ class ModelWrapper:
         return self._is_train
 
     def _init_train_vars(self):
-        self._optimizer = Optimizer().get(self._model, self._args.optimizer, lr=self._args.lr,
+        # infer learning rate before changing batch size
+        init_lr = self._args.lr * self._args.batch_size / 256
+        self._optimizer = Optimizer().get(self._model, self._args.optimizer, lr=init_lr,
                                           wd=self._args.weight_decay)
         self.lr_scheduler = Scheduler().get(self._args.lr_policy, self._optimizer, step_size=self._args.lr_decay_epochs)
 
@@ -104,16 +106,12 @@ class ModelWrapper:
     def compute_loss(self, batch_data):
         positive_images = batch_data['positive'].to(self._device, non_blocking=True)
         anchor_images = batch_data['anchor'].to(self._device, non_blocking=True)
-        negative_images = batch_data['negative'].to(self._device, non_blocking=True)
 
-        criteria = nn.TripletMarginLoss(margin=self._args.triplet_margin)
+        criterion = nn.CosineSimilarity(dim=1)
         with torch.set_grad_enabled(self._is_train):
-            pos_features = self._model(positive_images)
-            anc_features = self._model(anchor_images)
-            neg_features = self._model(negative_images)
-
-            loss = criteria(anc_features, pos_features, neg_features)
-            return loss, (pos_features, anc_features, neg_features)
+            p1, p2, z1, z2 = self._model(x1=positive_images, x2=anchor_images)
+            loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
+            return loss, (p1, p2)
 
     def optimise_params(self, loss):
         self._optimizer.zero_grad()

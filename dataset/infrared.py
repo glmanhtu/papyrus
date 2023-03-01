@@ -81,19 +81,12 @@ class InfraredDataset(Dataset):
         p_from, p_to = proportion
         d_size = len(papyrus_ids)
         self.ids = papyrus_ids[int(d_size * p_from):int(d_size * p_to)]
-
-        for k, v in list(papyri.items()):
-            papyri[k] = [[x] for x in papyri[k]]
-
         self.patch_size = patch_size
 
         data = []
         for papyrus_id in self.ids:
-            for anchor in papyri[papyrus_id]:
-                positive_list = papyri[papyrus_id]
-                negative_list = [papyri[x] for x in self.ids if x != papyrus_id]
-                negative_list = list(itertools.chain.from_iterable(negative_list))
-                data.append((positive_list, anchor, negative_list))
+            for img in papyri[papyrus_id]:
+                data.append(img)
 
         self.data = data
         self.transforms = transforms
@@ -111,39 +104,21 @@ class InfraredDataset(Dataset):
         img_path = os.path.join(self.dataset_path, fragment_name, f"{img_id}.png")
         return self.get_patch([img_path])[0]
 
-    def get_patch(self, img_list):
-        image_path = ''
-        while len(img_list) > 0:
-            image_path = random.choice(img_list)
-            try:
-                img = read_image(image_path)
-                return data_utils.extract_random_patch(img, self.patch_size), image_path
-            except PatchNotExtractableException:
-                # logging.error(f"Could not extract patch from image {image_path}, retry another image...")
-                img_list.remove(image_path)
-        raise Exception('Could not extract any patch. Last img: ' + image_path)
+    def get_patch(self, image_path):
+        img = read_image(image_path)
+        return data_utils.extract_random_patch(img, self.patch_size)
 
     def __getitem__(self, idx):
-        positive_list, anchor, negative_list = self.data[idx]
-        positive_list = list(itertools.chain.from_iterable(positive_list))
-        negative_list = list(itertools.chain.from_iterable(negative_list))
+        img_path = self.data[idx]
+        positive_image = os.path.splitext(os.path.basename(img_path))[0]
+        positive_patch = self.get_patch(img_path)
 
-        positive_patch, pos_img_path = self.get_patch(positive_list)
-        positive_image = os.path.splitext(os.path.basename(pos_img_path))[0]
-
-        anchor_patch, anc_img_path = self.get_patch(anchor)
-        anchor_image = os.path.splitext(os.path.basename(anc_img_path))[0]
-
-        negative_patch, neg_img_path = self.get_patch(negative_list)
-        negative_image = os.path.splitext(os.path.basename(neg_img_path))[0]
+        anchor_patch = self.get_patch(img_path)
 
         return {
             "positive": self.transforms(positive_patch),
-            "pos_image":  positive_image,
+            "pos_image": positive_image,
 
             "anchor": self.transforms(anchor_patch),
-            "anc_image": anchor_image,
-
-            "negative": self.transforms(negative_patch),
-            "neg_image": negative_image,
+            "anc_image": positive_image,
         }

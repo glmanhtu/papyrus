@@ -37,12 +37,12 @@ class Trainer:
                                               dropout=args.dropout)
         transforms = get_transforms()
         dataset_train = MichiganDataset(args.michigan_dir, transforms, patch_size=args.image_size, proportion=(0, 0.8),
-                                        only_recto=True, min_fragments_per_papyrus=2)
+                                        only_recto=True)
         self.data_loader_train = DataLoader(dataset_train, shuffle=True, num_workers=args.n_threads_train,
-                                            batch_size=args.batch_size, drop_last=True)
+                                            batch_size=args.batch_size, drop_last=True, pin_memory=True)
         transforms = val_transforms(args)
         dataset_val = MichiganDataset(args.michigan_dir, transforms, patch_size=args.image_size, proportion=(0.8, 1),
-                                      only_recto=True, min_fragments_per_papyrus=2)
+                                      only_recto=True)
 
         self.data_loader_val = DataLoader(dataset_val, shuffle=False, num_workers=args.n_threads_test,
                                           batch_size=args.batch_size)
@@ -151,11 +151,10 @@ class Trainer:
         img_features = {}
         for i in range(n_time_validates):
             for i_train_batch, batch in enumerate(val_loader):
-                val_loss, (pos_features, anc_features, neg_features) = self._model.compute_loss(batch)
+                val_loss, (pos_features, anc_features) = self._model.compute_loss(batch)
                 val_losses.append(val_loss)
                 self.add_features(img_features, batch['pos_image'], pos_features)
                 self.add_features(img_features, batch['anc_image'], anc_features)
-                self.add_features(img_features, batch['neg_image'], neg_features)
             print(f'Finished the evaluating {i + 1}/{n_time_validates}')
 
         similar_df = compute_similarity_matrix(img_features)
