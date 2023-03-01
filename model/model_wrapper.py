@@ -111,7 +111,7 @@ class ModelWrapper:
         with torch.set_grad_enabled(self._is_train):
             p1, p2, z1, z2 = self._model(x1=positive_images, x2=anchor_images)
             loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
-            return loss, (p1, p2)
+            return loss + 1.0, (p1, p2)
 
     def optimise_params(self, loss):
         self._optimizer.zero_grad()
