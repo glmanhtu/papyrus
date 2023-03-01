@@ -71,7 +71,7 @@ class MichiganDataset(Dataset):
 
     def get_patch_by_id(self, img_id):
         img_path = os.path.join(self.dataset_path, f"{img_id}.png")
-        return self.get_patch([img_path])[0]
+        return self.get_patch(img_path)
 
     def get_patch(self, image_path):
         img = read_image(image_path)
