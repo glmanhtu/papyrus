@@ -73,9 +73,7 @@ class InfraredDataset(Dataset):
                 continue
 
             papyrus_id = self.get_papyrus_id(file_name)
-            if papyrus_id not in papyri:
-                papyri[papyrus_id] = []
-            papyri[papyrus_id].append(file)
+            papyri.setdefault(papyrus_id, []).append(file)
 
         papyrus_ids = list(sorted(papyri.keys()))
         p_from, p_to = proportion

@@ -45,9 +45,7 @@ class MichiganDataset(Dataset):
             if file_name in excludes:
                 continue
             papyrus_id = get_papyrus_id(file_name)
-            if papyrus_id not in papyri:
-                papyri[papyrus_id] = []
-            papyri[papyrus_id].append(file)
+            papyri.setdefault(papyrus_id, []).append(file)
 
         for k, v in list(papyri.items()):
             if len(v) < min_fragments_per_papyrus:
