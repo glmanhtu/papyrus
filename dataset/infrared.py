@@ -113,22 +113,22 @@ class InfraredDataset(Dataset):
 
     def get_patch(self, image_path):
         img = read_image(image_path)
-        return data_utils.extract_random_patch(img, self.patch_size, background_threshold=self.patch_bg_threshold)
+        try:
+            return data_utils.extract_random_patch(img, self.patch_size, background_threshold=self.patch_bg_threshold)
+        except PatchNotExtractableException:
+            raise Exception(f'Unable to extract patch from image {image_path}')
 
     def __getitem__(self, idx):
         img_path = self.data[idx]
-        try:
-            positive_image = os.path.splitext(os.path.basename(img_path))[0]
-            positive_patch = self.get_patch(img_path)
+        img_id = os.path.splitext(os.path.basename(img_path))[0]
+        positive_patch = self.get_patch(img_path)
 
-            anchor_patch = self.get_patch(img_path)
+        anchor_patch = self.get_patch(img_path)
 
-            return {
-                "positive": self.transforms(positive_patch),
-                "pos_image": positive_image,
+        return {
+            "positive": self.transforms(positive_patch),
+            "pos_image": img_id,
 
-                "anchor": self.transforms(anchor_patch),
-                "anc_image": positive_image,
-            }
-        except PatchNotExtractableException:
-            print(f'Unable to extract patch for image: {img_path}')
+            "anchor": self.transforms(anchor_patch),
+            "anc_image": img_id,
+        }

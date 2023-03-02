@@ -11,7 +11,8 @@ from utils.data_utils import read_image
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
-excludes = ['4458br_22', '102r_25', '102r_29', '102r_27']
+excludes = ['4458br_22', '1253_19r_23', '1368R_11', '1368R_27', '2153dr_5', '2228r_32', '4800br_7', '4800br_8',
+            '102r_21', '102r_23', '102r_26', '102r_28', '102r_25', '102r_29', '102r_27', '4857ar_47']
 
 
 def get_papyrus_id(fragment):
@@ -66,7 +67,6 @@ class MichiganDataset(Dataset):
         self.patch_bg_threshold = patch_bg_threshold
         self.transforms = transforms
         self.get_papyrus_id = get_papyrus_id
-        self.bad_imgs = []
 
     def __len__(self):
         return len(self.data)
@@ -77,22 +77,22 @@ class MichiganDataset(Dataset):
 
     def get_patch(self, image_path):
         img = read_image(image_path)
-        return data_utils.extract_random_patch(img, self.patch_size, background_threshold=self.patch_bg_threshold)
+        try:
+            return data_utils.extract_random_patch(img, self.patch_size, background_threshold=self.patch_bg_threshold)
+        except PatchNotExtractableException:
+            raise Exception(f'Unable to extract patch from image {image_path}')
 
     def __getitem__(self, idx):
         img_path = self.data[idx]
-        positive_image = os.path.splitext(os.path.basename(img_path))[0]
-        try:
-            positive_patch = self.get_patch(img_path)
+        img_id = os.path.splitext(os.path.basename(img_path))[0]
+        positive_patch = self.get_patch(img_path)
 
-            anchor_patch = self.get_patch(img_path)
+        anchor_patch = self.get_patch(img_path)
 
-            return {
-                "positive": self.transforms(positive_patch),
-                "pos_image":  positive_image,
+        return {
+            "positive": self.transforms(positive_patch),
+            "pos_image":  img_id,
 
-                "anchor": self.transforms(anchor_patch),
-                "anc_image": positive_image,
-            }
-        except PatchNotExtractableException:
-            self.bad_imgs.append(positive_image)
+            "anchor": self.transforms(anchor_patch),
+            "anc_image": img_id,
+        }
