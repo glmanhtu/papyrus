@@ -12,7 +12,8 @@ from utils.data_utils import read_image
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
 excludes = ['4458br_22', '1253_19r_23', '1368R_11', '1368R_27', '2153dr_5', '2228r_32', '4800br_7', '4800br_8',
-            '102r_21', '102r_23', '102r_26', '102r_28', '102r_25', '102r_29', '102r_27', '4857ar_47']
+            '102r_21', '102r_23', '102r_26', '102r_28', '102r_25', '102r_29', '102r_27', '4857ar_47',
+            '7219r_6', '7205r_5', '7205r_9']
 
 
 def get_papyrus_id(fragment):
