@@ -13,7 +13,9 @@ from utils.data_utils import read_image, minmax_split_chunks
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
-excludes = ['4458br_22']
+excludes = ['4458br_22', '1253_19r_23', '1368R_11', '1368R_27', '2153dr_5', '2228r_32', '4800br_7', '4800br_8',
+            '102r_21', '102r_23', '102r_26', '102r_28', '102r_25', '102r_29', '102r_27', '4857ar_47',
+            '7219r_6', '7205r_5', '7205r_9']
 
 
 def get_papyrus_id(fragment):
@@ -31,7 +33,7 @@ def get_papyrus_id(fragment):
 class MichiganDataset(Dataset):
 
     def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8),
-                 only_recto=True, min_fragments_per_papyrus=2):
+                 only_recto=True, min_fragments_per_papyrus=2, patch_bg_threshold=0.5):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
         image_pattern = os.path.join(dataset_path, '**', '*.png')
@@ -73,6 +75,7 @@ class MichiganDataset(Dataset):
                 data.append((positive_list, anchor, negative_list))
 
         self.data = data
+        self.patch_bg_threshold = patch_bg_threshold
         self.transforms = transforms
         self.get_papyrus_id = get_papyrus_id
 
@@ -89,9 +92,9 @@ class MichiganDataset(Dataset):
             image_path = random.choice(img_list)
             try:
                 img = read_image(image_path)
-                return data_utils.extract_random_patch(img, self.patch_size), image_path
+                return data_utils.extract_random_patch(img, self.patch_size, self.patch_bg_threshold), image_path
             except PatchNotExtractableException:
-                # logging.error(f"Could not extract patch from image {image_path}, retry another image...")
+                logging.error(f"Could not extract patch from image {image_path}, retry another image...")
                 img_list.remove(image_path)
         raise Exception('Could not extract any patch. Last img: ' + image_path)
 
