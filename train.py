@@ -37,18 +37,18 @@ class Trainer:
                                               dropout=args.dropout)
         transforms = get_transforms()
         dataset_train = MichiganDataset(args.michigan_dir, transforms, patch_size=args.image_size, proportion=(0, 0.8),
-                                        only_recto=True)
+                                        only_recto=True, patch_bg_threshold=args.patch_bg_threshold)
         self.data_loader_train = DataLoader(dataset_train, shuffle=True, num_workers=args.n_threads_train,
                                             batch_size=args.batch_size, drop_last=True, pin_memory=True)
         transforms = val_transforms(args)
         dataset_val = MichiganDataset(args.michigan_dir, transforms, patch_size=args.image_size, proportion=(0.8, 1),
-                                      only_recto=True)
+                                      only_recto=True, patch_bg_threshold=args.patch_bg_threshold)
 
         self.data_loader_val = DataLoader(dataset_val, shuffle=False, num_workers=args.n_threads_test,
                                           batch_size=args.batch_size)
 
         dataset_test = InfraredDataset(args.infrared_dir, transforms, patch_size=args.image_size, proportion=(0, 1),
-                                       only_recto=True)
+                                       only_recto=True, patch_bg_threshold=args.patch_bg_threshold)
         self.data_loader_test = DataLoader(dataset_test, shuffle=False, num_workers=args.n_threads_test,
                                            batch_size=args.batch_size)
 

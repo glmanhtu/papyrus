@@ -28,7 +28,8 @@ def get_papyrus_id(fragment):
 
 class MichiganDataset(Dataset):
 
-    def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8), only_recto=True):
+    def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8),
+                 only_recto=True, patch_bg_threshold=0.5):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
         image_pattern = os.path.join(dataset_path, '**', '*.png')
@@ -62,6 +63,7 @@ class MichiganDataset(Dataset):
                 data.append(img)
 
         self.data = data
+        self.patch_bg_threshold = patch_bg_threshold
         self.transforms = transforms
         self.get_papyrus_id = get_papyrus_id
         self.bad_imgs = []
@@ -75,7 +77,7 @@ class MichiganDataset(Dataset):
 
     def get_patch(self, image_path):
         img = read_image(image_path)
-        return data_utils.extract_random_patch(img, self.patch_size)
+        return data_utils.extract_random_patch(img, self.patch_size, background_threshold=self.patch_bg_threshold)
 
     def __getitem__(self, idx):
         img_path = self.data[idx]

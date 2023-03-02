@@ -13,6 +13,9 @@ from utils.data_utils import read_image
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
+excludes = ['2855e', '2855b', '2882b', '2881c']     # Incorrect segmentation samples
+excludes += ['0567s']   # Too small
+
 
 def get_fragment_id(file_name):
     id_search = re.search(r'(\d+)', file_name)
@@ -53,7 +56,7 @@ def extract_relations(dataset_path):
 
 class InfraredDataset(Dataset):
     def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 1),
-                 only_recto=True):
+                 only_recto=True, patch_bg_threshold=0.5):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
 
@@ -72,6 +75,9 @@ class InfraredDataset(Dataset):
             if only_recto and 'COLR' not in file_name:
                 continue
 
+            if file_name.rsplit("_")[0] in excludes:
+                continue
+
             papyrus_id = self.get_papyrus_id(file_name)
             if papyrus_id not in papyri:
                 papyri[papyrus_id] = []
@@ -80,6 +86,7 @@ class InfraredDataset(Dataset):
         papyrus_ids = list(sorted(papyri.keys()))
         p_from, p_to = proportion
         d_size = len(papyrus_ids)
+        self.patch_bg_threshold = patch_bg_threshold
         self.ids = papyrus_ids[int(d_size * p_from):int(d_size * p_to)]
         self.patch_size = patch_size
 
@@ -106,19 +113,22 @@ class InfraredDataset(Dataset):
 
     def get_patch(self, image_path):
         img = read_image(image_path)
-        return data_utils.extract_random_patch(img, self.patch_size)
+        return data_utils.extract_random_patch(img, self.patch_size, background_threshold=self.patch_bg_threshold)
 
     def __getitem__(self, idx):
         img_path = self.data[idx]
-        positive_image = os.path.splitext(os.path.basename(img_path))[0]
-        positive_patch = self.get_patch(img_path)
+        try:
+            positive_image = os.path.splitext(os.path.basename(img_path))[0]
+            positive_patch = self.get_patch(img_path)
 
-        anchor_patch = self.get_patch(img_path)
+            anchor_patch = self.get_patch(img_path)
 
-        return {
-            "positive": self.transforms(positive_patch),
-            "pos_image": positive_image,
+            return {
+                "positive": self.transforms(positive_patch),
+                "pos_image": positive_image,
 
-            "anchor": self.transforms(anchor_patch),
-            "anc_image": positive_image,
-        }
+                "anchor": self.transforms(anchor_patch),
+                "anc_image": positive_image,
+            }
+        except PatchNotExtractableException:
+            print(f'Unable to extract patch for image: {img_path}')

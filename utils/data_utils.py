@@ -19,7 +19,7 @@ def padding_image(img, new_size, color=(0, 0, 0)):
     return result
 
 
-def extract_random_patch(image, patch_size, background_threshold=0.8, max_retries=100, current_retries=0):
+def extract_random_patch(image, patch_size, background_threshold=0.6, max_retries=100, current_retries=0):
     # Get the dimensions of the image
     height, width, channels = image.shape
 

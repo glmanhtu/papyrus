@@ -37,7 +37,9 @@ class BaseOptions:
                                   help="The initial learning rate")
         self._parser.add_argument('--triplet_margin', type=float, default=0.2,
                                   help="Margin value for the TripletMarginLoss")
-        self._parser.add_argument('--dropout', type=float, default=0.5, help="Default learning rate")
+        self._parser.add_argument('--dropout', type=float, default=0.5, help="Default dropout")
+        self._parser.add_argument('--patch_bg_threshold', type=float, default=0.6,
+                                  help="Maximum background percentage allowed")
         self._parser.add_argument('--lr_policy', type=str, default='none', choices=['step', 'none'])
         self._parser.add_argument('--lr_decay_epochs', type=int, default=100,
                                   help='reduce the lr to 0.1*lr for every # epochs')
