@@ -47,15 +47,9 @@ class Trainer:
         self.data_loader_val = DataLoader(dataset_val, shuffle=False, num_workers=args.n_threads_test,
                                           batch_size=args.batch_size)
 
-        dataset_test = InfraredDataset(args.infrared_dir, transforms, patch_size=args.image_size, proportion=(0, 1),
-                                       only_recto=True)
-        self.data_loader_test = DataLoader(dataset_test, shuffle=False, num_workers=args.n_threads_test,
-                                           batch_size=args.batch_size)
-
         self.early_stop = EarlyStop(args.early_stop)
         print("Training sets: {} images".format(len(dataset_train)))
         print("Validating sets: {} images".format(len(dataset_val)))
-        print("Test sets: {} images".format(len(dataset_test)))
 
         self._current_step = 0
 
@@ -69,13 +63,19 @@ class Trainer:
         self._model.load()
 
     def test(self):
-        print('Starting to test...')
-        test_dict, df = self._validate(0, self.data_loader_test, mode='test', n_time_validates=25)
-        df.to_csv(os.path.join(self._working_dir, 'infrared_similarity_matrix.csv'), encoding='utf-8')
+        transforms = val_transforms(args)
+        for data_type in ['COLR', 'COLV', 'IRR', 'IRV']:
+            dataset_test = InfraredDataset(args.infrared_dir, transforms, patch_size=args.image_size, proportion=(0, 1),
+                                           file_type_filter=data_type)
+            data_loader_test = DataLoader(dataset_test, shuffle=False, num_workers=args.n_threads_test,
+                                          batch_size=args.batch_size)
+            print(f'Starting to test {data_type}')
+            test_dict, df = self._validate(0, data_loader_test, mode=f'test/{data_type}', n_time_validates=25)
+            df.to_csv(os.path.join(self._working_dir, f'similarity_test_{data_type}.csv'), encoding='utf-8')
 
-        query_results = random_query_results(df, self.data_loader_test.dataset, n_queries=5, top_k=25)
-        wandb.log({'best_model_prediction': wb_utils.generate_query_table(query_results, top_k=25)},
-                  step=self._current_step)
+            query_results = random_query_results(df, dataset_test, n_queries=5, top_k=25)
+            wandb.log({f'test/{data_type}/best_prediction': wb_utils.generate_query_table(query_results, top_k=25)},
+                      step=self._current_step)
 
     def train(self):
         best_m_ap = 0.
@@ -159,7 +159,7 @@ class Trainer:
             print(f'Finished the evaluating {i + 1}/{n_time_validates}')
 
         similar_df = compute_similarity_matrix(img_features)
-        wandb.log({'similarity_fragment_level': wandb.Image(create_heatmap(similar_df))}, step=self._current_step)
+        wandb.log({f'{mode}/similarity_matrix': wandb.Image(create_heatmap(similar_df))}, step=self._current_step)
 
         m_ap, top1, pr_a_k10, pr_a_k100 = get_metrics(similar_df, val_loader.dataset.get_papyrus_id)
 

@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: 
 args = TrainOptions(save_conf=False).parse()
 transforms = torchvision.transforms.Compose([])
 
-train_dataset = InfraredDataset(args.infrared_dir, transforms, args.image_size)
+train_dataset = InfraredDataset(args.infrared_dir, transforms, args.image_size, file_type_filter='IRR')
 
 for item in train_dataset:
     image = np.concatenate([item['positive'], item['anchor'], item['negative']], axis=0)

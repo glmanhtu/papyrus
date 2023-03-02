@@ -33,7 +33,7 @@ def get_papyrus_id(fragment):
 class MichiganDataset(Dataset):
 
     def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 0.8),
-                 only_recto=True, min_fragments_per_papyrus=2, patch_bg_threshold=0.5):
+                 only_recto=True, min_fragments_per_papyrus=2, patch_bg_threshold=0.6):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
         image_pattern = os.path.join(dataset_path, '**', '*.png')

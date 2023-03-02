@@ -56,7 +56,7 @@ def extract_relations(dataset_path):
 
 class InfraredDataset(Dataset):
     def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 1),
-                 only_recto=True, patch_bg_threshold=0.5):
+                 patch_bg_threshold=0.6, file_type_filter='COLR'):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
 
@@ -72,7 +72,7 @@ class InfraredDataset(Dataset):
         papyri = {}
         for file in files:
             file_name = os.path.splitext(os.path.basename(file))[0]
-            if only_recto and 'COLR' not in file_name:
+            if file_type_filter not in file_name:
                 continue
 
             if file_name.rsplit("_")[0] in excludes:
