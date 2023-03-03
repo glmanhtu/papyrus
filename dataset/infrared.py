@@ -36,7 +36,8 @@ exclude_imgs = ['2969c_IRV', '2969c_IRR', '2934c_IRR', '1306b_IRR', '1353f_IRV',
                 '2882c_IRR', '1290r_IRV', '1290r_IRR', '0567n_IRV', '2859a_COLV', '2859a_IRV', '2859a_COLR',
                 '2950b_IRV', '1438g_IRR', '1316d_IRV', '1316d_IRR', '2735j_IRR', '2735j_IRV', '1290w_IRV',
                 '0811c_1442_IRR', '1223e_1224d_IRV', '1223e_1224d_IRR', '3007_IRR', '3007_IRV', '2970b_IRV',
-                '2970b_IRR', '2875f_IRV', '2859b_COLV', '2859b_IRV', '2859b_COLR', '1378i_IRV']
+                '2970b_IRR', '2875f_IRV', '2859b_COLV', '2859b_IRV', '2859b_COLR', '1378i_IRV',
+                '0567s_IRR', '0567s_COLR', '0567s_COLV']
 
 
 def get_fragment_id(file_name):
@@ -78,7 +79,7 @@ def extract_relations(dataset_path):
 
 class InfraredDataset(Dataset):
     def __init__(self, dataset_path: str, transforms, patch_size=224, proportion=(0, 1),
-                 only_recto=True, patch_bg_threshold=0.5):
+                 patch_bg_threshold=0.6, file_type_filter='COLR'):
         self.dataset_path = dataset_path
         assert os.path.isdir(self.dataset_path)
 
@@ -94,16 +95,14 @@ class InfraredDataset(Dataset):
         papyri = {}
         for file in files:
             file_name = os.path.splitext(os.path.basename(file))[0]
-            if only_recto and 'COLR' not in file_name:
+            if file_type_filter not in file_name:
                 continue
 
             if file_name in exclude_imgs:
                 continue
 
             papyrus_id = self.get_papyrus_id(file_name)
-            if papyrus_id not in papyri:
-                papyri[papyrus_id] = []
-            papyri[papyrus_id].append(file)
+            papyri.setdefault(papyrus_id, []).append(file)
 
         papyrus_ids = list(sorted(papyri.keys()))
         p_from, p_to = proportion
