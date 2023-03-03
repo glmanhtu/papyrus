@@ -28,7 +28,9 @@ class ModelWrapper:
         return self._is_train
 
     def _init_train_vars(self):
-        self._optimizer = Optimizer().get(self._model, self._args.optimizer, lr=self._args.lr,
+        # infer learning rate before changing batch size
+        init_lr = self._args.lr * self._args.batch_size / 256
+        self._optimizer = Optimizer().get(self._model, self._args.optimizer, lr=init_lr,
                                           wd=self._args.weight_decay)
         self.lr_scheduler = Scheduler().get(self._args.lr_policy, self._optimizer, step_size=self._args.lr_decay_epochs)
 
