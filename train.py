@@ -179,13 +179,10 @@ class Trainer:
 if __name__ == "__main__":
     trainer = Trainer()
     if trainer.is_trained():
+        trainer.set_current_step(wandb.run.step)
         trainer.load_pretrained_model()
 
-    if args.resume:
-        trainer.set_current_step(wandb.run.step)
-        trainer.train()
-
-    if not trainer.is_trained():
+    if args.resume or not trainer.is_trained():
         trainer.train()
 
     trainer.load_pretrained_model()
