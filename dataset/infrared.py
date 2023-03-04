@@ -1,8 +1,6 @@
 import glob
 import logging
 import os
-import random
-import itertools
 import re
 
 from torch.utils.data import Dataset

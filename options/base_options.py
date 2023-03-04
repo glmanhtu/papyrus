@@ -35,8 +35,6 @@ class BaseOptions:
         self._parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         self._parser.add_argument('--lr', type=float, default=4e-4,
                                   help="The initial learning rate")
-        self._parser.add_argument('--triplet_margin', type=float, default=0.2,
-                                  help="Margin value for the TripletMarginLoss")
         self._parser.add_argument('--dropout', type=float, default=0.5, help="Default dropout")
         self._parser.add_argument('--patch_bg_threshold', type=float, default=0.6,
                                   help="Maximum background percentage allowed")
