@@ -11,7 +11,7 @@ class ModelsFactory:
     @staticmethod
     def get_model(args, working_dir, is_train, device, dropout=0.4):
         if args.network == 'simsiam':
-            model = simsiam.SimSiam(models.__dict__['resnet50'], dim=512, pred_dim=2048)
+            model = simsiam.SimSiam(models.__dict__['resnet50'])
         else:
             raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')
 
