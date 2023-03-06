@@ -58,17 +58,20 @@ def extract_relations(dataset_path):
     for dir_name in sorted(os.listdir(dataset_path)):
         name_components = dir_name.split("_")
         fragment_ids = [get_fragment_id(x) for x in name_components]
-        reference_group = None
-        for group in groups:
+        reference_group = {}
+        for g_id, group in enumerate(groups):
             for fragment_id in fragment_ids:
-                if fragment_id in group:
-                    reference_group = group
-                    break
-            if reference_group is not None:
-                break
-        if reference_group is not None:
+                if fragment_id in group and g_id not in reference_group:
+                    reference_group[g_id] = group
+
+        if len(reference_group) > 0:
+            reference_ids = list(reference_group.keys())
             for fragment_id in fragment_ids:
-                reference_group.add(fragment_id)
+                reference_group[reference_ids[0]].add(fragment_id)
+            for g_id in reference_ids[1:]:
+                for fragment_id in reference_group[g_id]:
+                    reference_group[reference_ids[0]].add(fragment_id)
+                del groups[g_id]
         else:
             groups.append(set(fragment_ids))
 
