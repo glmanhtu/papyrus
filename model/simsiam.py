@@ -22,18 +22,19 @@ class SimSiam(nn.Module):
         # create the encoder
         # num_classes is the output fc dimension, zero-initialize last BNs
         self.encoder = base_encoder(num_classes=dim, zero_init_residual=True)
+        # Modify the average pooling layer to use a smaller kernel size
+        self.encoder.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         # build a 3-layer projector
         prev_dim = self.encoder.fc.weight.shape[1]
         self.encoder.fc = nn.Sequential(nn.Linear(prev_dim, prev_dim, bias=False),
                                         nn.BatchNorm1d(prev_dim),
-                                        nn.ReLU(inplace=True), # first layer
+                                        nn.ReLU(inplace=True),  # first layer
                                         nn.Linear(prev_dim, prev_dim, bias=False),
                                         nn.BatchNorm1d(prev_dim),
-                                        nn.ReLU(inplace=True), # second layer
-                                        self.encoder.fc,
-                                        nn.BatchNorm1d(dim, affine=False)) # output layer
-        self.encoder.fc[6].bias.requires_grad = False # hack: not use bias as it is followed by BN
+                                        nn.ReLU(inplace=True),  # second layer
+                                        nn.Linear(prev_dim, dim, bias=False),
+                                        nn.BatchNorm1d(dim, affine=False))  # output layer
 
         # build a 2-layer predictor
         self.predictor = nn.Sequential(nn.Linear(dim, pred_dim, bias=False),

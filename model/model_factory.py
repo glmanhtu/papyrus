@@ -10,10 +10,7 @@ class ModelsFactory:
 
     @staticmethod
     def get_model(args, working_dir, is_train, device, dropout=0.4):
-        if args.network == 'simsiam':
-            model = simsiam.SimSiam(models.__dict__['resnet50'])
-        else:
-            raise NotImplementedError(f'Model {args.network} haven\'t implemented yet!!!')
+        model = simsiam.SimSiam(models.__dict__[args.arch], dim=512, pred_dim=1024)
 
         model = ModelWrapper(args, working_dir, model, is_train, device)
         return model
