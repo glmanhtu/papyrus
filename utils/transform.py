@@ -5,11 +5,11 @@ from torchvision.transforms import transforms
 
 
 def get_transforms():
-    applying_percent = 0.3
+    applying_percent = 0.4
     return torchvision.transforms.Compose([
         torchvision.transforms.ToPILImage(),
         torchvision.transforms.RandomApply([
-            torchvision.transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3),
+            torchvision.transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
         ], p=applying_percent),
         torchvision.transforms.RandomHorizontalFlip(),
         torchvision.transforms.ToTensor(),
