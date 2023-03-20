@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
 from utils import data_utils
-from utils.data_utils import read_image
+from utils.data_utils import read_image, add_items_to_group
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
@@ -58,22 +58,7 @@ def extract_relations(dataset_path):
     for dir_name in sorted(os.listdir(dataset_path)):
         name_components = dir_name.split("_")
         fragment_ids = [get_fragment_id(x) for x in name_components]
-        reference_group = {}
-        for g_id, group in enumerate(groups):
-            for fragment_id in fragment_ids:
-                if fragment_id in group and g_id not in reference_group:
-                    reference_group[g_id] = group
-
-        if len(reference_group) > 0:
-            reference_ids = list(reference_group.keys())
-            for fragment_id in fragment_ids:
-                reference_group[reference_ids[0]].add(fragment_id)
-            for g_id in reference_ids[1:]:
-                for fragment_id in reference_group[g_id]:
-                    reference_group[reference_ids[0]].add(fragment_id)
-                del groups[g_id]
-        else:
-            groups.append(set(fragment_ids))
+        add_items_to_group(fragment_ids, groups)
 
     return groups
 

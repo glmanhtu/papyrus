@@ -71,3 +71,22 @@ def minmax_split_chunks(data, n_chunks=(2, 4)):
         return chunks(data, middle)
     else:
         return chunks(data, min_chunk)
+
+
+def add_items_to_group(items, groups):
+    reference_group = {}
+    for g_id, group in enumerate(groups):
+        for fragment_id in items:
+            if fragment_id in group and g_id not in reference_group:
+                reference_group[g_id] = group
+
+    if len(reference_group) > 0:
+        reference_ids = list(reference_group.keys())
+        for fragment_id in items:
+            reference_group[reference_ids[0]].add(fragment_id)
+        for g_id in reference_ids[1:]:
+            for fragment_id in reference_group[g_id]:
+                reference_group[reference_ids[0]].add(fragment_id)
+            del groups[g_id]
+    else:
+        groups.append(set(items))
