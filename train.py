@@ -137,10 +137,9 @@ class Trainer:
     @staticmethod
     def add_features(img_features, images, features):
         for image_name, features in zip(images, features):
-            feature_cpu = features.cpu()
             if image_name not in img_features:
                 img_features[image_name] = []
-            img_features[image_name].append(feature_cpu)
+            img_features[image_name].append(features)
 
     def _validate(self, i_epoch, val_loader, mode='val', n_time_validates=3):
         val_start_time = time.time()
@@ -156,6 +155,7 @@ class Trainer:
                 self.add_features(img_features, batch['anc_image'], anc_features)
             print(f'Finished the evaluating {i + 1}/{n_time_validates}')
 
+        img_features = {k: torch.stack(v) for k, v in img_features.items()}
         similar_df = compute_similarity_matrix(img_features)
         wandb.log({f'{mode}/similarity_matrix': wandb.Image(create_heatmap(similar_df))}, step=self._current_step)
 
