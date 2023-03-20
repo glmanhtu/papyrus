@@ -58,24 +58,23 @@ def display_terminal_eval(iter_start_time, i_epoch, eval_dict):
     print(output + "\n")
 
 
-def compute_similarity_matrix(data: Dict[str, List[Tensor]], n_times_testing=5):
+def compute_similarity_matrix(data: Dict[str, Tensor], n_times_testing=5):
     similarity_map = {}
     fragments = list(data.keys())
     for i in range(len(fragments)):
         for j in range(i, len(fragments)):
             source, target = fragments[i], fragments[j]
-            n_items = min(len(data[source]), len(data[target]))
-            n_times = max((len(data[source]) + len(data[target])) // 2, n_times_testing)
-            source_features, target_features = [], []
-            for _ in range(n_times):
-                source_features += random.sample(data[source], n_items)
-                target_features += random.sample(data[target], n_items)
-            source_features = F.normalize(torch.stack(source_features), p=2, dim=1)
-            target_features = F.normalize(torch.stack(target_features), p=2, dim=1)
+            n_items = max(len(data[source]), len(data[target]))
+
+            source_features = data[source][torch.randint(len(data[source]), (n_times_testing * n_items,))]
+            target_features = data[target][torch.randint(len(data[target]), (n_times_testing * n_items,))]
+
+            source_features = F.normalize(source_features, p=2, dim=1)
+            target_features = F.normalize(target_features, p=2, dim=1)
             similarity = F.cosine_similarity(source_features, target_features, dim=1)
             similarity_percentage = (similarity + 1) / 2   # As output of cosine_similarity ranging between [-1, 1]
 
-            mean_similarity = similarity_percentage.mean().item()
+            mean_similarity = similarity_percentage.mean().cpu().item()
             similarity_map.setdefault(source, {})[target] = mean_similarity
             similarity_map.setdefault(target, {})[source] = mean_similarity
 
