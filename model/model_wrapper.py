@@ -14,7 +14,7 @@ class ModelWrapper:
         self._args = args
         self._is_train = is_train
         self._save_dir = working_dir
-        os.makedirs(working_dir)
+        os.makedirs(working_dir, exist_ok=True)
 
         if self._is_train:
             self._model.train()
