@@ -94,6 +94,10 @@ class Trainer:
                 print(f'Early stop at epoch {i_epoch}')
                 break
 
+    def final_eval(self):
+        val_dict, similar_df = self._validate(0, self.data_loader_val, mode=f'val/{self._dtype}')
+        similar_df.to_csv(os.path.join(self._working_dir, 'similarity_matrix.csv'), encoding='utf-8')
+
     def _train_epoch(self, i_epoch):
         self._model.set_train()
         losses = []
@@ -163,10 +167,12 @@ if __name__ == "__main__":
                          mode=args.wb_mode)
 
         trainer = Trainer(data_type)
-        if trainer.is_trained():
-            trainer.load_pretrained_model()
 
         if not trainer.is_trained():
             trainer.train()
 
+        if trainer.is_trained():
+            trainer.load_pretrained_model()
+
+        trainer.final_eval()
         run.finish()
