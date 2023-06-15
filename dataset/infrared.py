@@ -116,7 +116,7 @@ class InfraredDataset(Dataset):
 
     def get_patch_by_id(self, img_id):
         fragment_name = img_id.rsplit('_', 1)[0]     # Remove _COLR, _COLV, etc
-        img_path = os.path.join(self.dataset_path, fragment_name, f"{img_id}.png")
+        img_path = os.path.join(self.dataset_path, fragment_name, f"{img_id}.jpg")
         return self.get_patch(img_path)
 
     def get_patch(self, image_path):
