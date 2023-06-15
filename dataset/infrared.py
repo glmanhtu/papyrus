@@ -36,6 +36,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: 
 #                 '0811c_1442_IRR', '1223e_1224d_IRV', '1223e_1224d_IRR', '3007_IRR', '3007_IRV', '2970b_IRV',
 #                 '2970b_IRR', '2875f_IRV', '2859b_COLV', '2859b_IRV', '2859b_COLR', '1378i_IRV',
 #                 '0567s_IRR', '0567s_COLR', '0567s_COLV']
+exclude_imgs = ['0567s_COLR']
 
 
 def get_fragment_id(file_name):
@@ -84,8 +85,8 @@ class InfraredDataset(Dataset):
             if file_type_filter not in file_name:
                 continue
 
-            # if file_name in exclude_imgs:
-            #     continue
+            if file_name in exclude_imgs:
+                continue
 
             papyrus_id = self.get_papyrus_id(file_name)
             papyri.setdefault(papyrus_id, []).append(file)
