@@ -75,7 +75,7 @@ class InfraredDataset(Dataset):
             for fragment_id in group:
                 self.fragment_ids[fragment_id] = idx
 
-        image_pattern = os.path.join(dataset_path, '**', '*.png')
+        image_pattern = os.path.join(dataset_path, '**', '*.jpg')
         files = glob.glob(image_pattern, recursive=True)
 
         papyri = {}
