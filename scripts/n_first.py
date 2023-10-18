@@ -20,6 +20,11 @@ args = parser.parse_args()
 
 # Load similarity matrix from CSV file
 similarity_matrix = pd.read_csv(args.similarity_file, index_col=0)
+name_mapping = {}
+for column in set(similarity_matrix.columns):
+    name_mapping[column] = column.replace('_COLV', '').replace('_COLR', '').replace('_IRR', '').replace('_IRV', '')
+similarity_matrix = similarity_matrix.rename(columns=name_mapping, index=name_mapping)
+
 top_similarities = {}
 top_similarities_value = {}
 min_val, max_val = 99999., 0.
