@@ -3,6 +3,7 @@ import logging
 import os
 import re
 
+import imagesize
 from torch.utils.data import Dataset
 
 from exception.data_exception import PatchNotExtractableException
@@ -82,6 +83,10 @@ class InfraredDataset(Dataset):
         papyri = {}
         for file in files:
             file_name = os.path.splitext(os.path.basename(file))[0]
+            width, height = imagesize.get(file)
+            if width < patch_size or height < patch_size:
+                continue
+
             if file_type_filter not in file_name:
                 continue
 
