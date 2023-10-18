@@ -55,6 +55,8 @@ for fragment_id in fragments:
 
             new_w, new_h = int(img.width * scale), int(img.height * scale)
             img = img.resize((new_w, new_h))
-            new_img_path = os.path.join(args.output_dir, fragment_id, f'{record["RV"]}_{record["IRCL"]}_{idx}.jpg')
+            ir_cl = "COL" if record["IRCL"] == "CL" else "IR"
+            filename = f'{fragment_id}_{ir_cl}{record["RV"].upper()}-{idx}.jpg'
+            new_img_path = os.path.join(args.output_dir, fragment_id, filename)
             os.makedirs(os.path.dirname(new_img_path), exist_ok=True)
             img.save(new_img_path)
