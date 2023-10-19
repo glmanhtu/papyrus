@@ -1,20 +1,16 @@
 import argparse
+import os
 
-import matplotlib
-from matplotlib import pyplot as plt
-from openpyxl.styles.fills import StopList
-from scipy.cluster.hierarchy import linkage, dendrogram
 import pandas as pd
-from openpyxl.styles import Color, PatternFill, Font, GradientFill, Alignment
 from openpyxl import Workbook
+from openpyxl.styles import Color, PatternFill, Font, Alignment
 
-# matplotlib.use('TkAgg')
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--similarity_file', type=str, help='Path to the similarity file', required=True)
 parser.add_argument('--n_first', type=int, default=20)
-parser.add_argument('--output_file', type=str, help='Path to the output file', required=True)
+parser.add_argument('--output_file', type=str, help='Path to the output file (.xlsx)', required=True)
 
 args = parser.parse_args()
 
@@ -54,7 +50,6 @@ def get_color(value):
                        end_color=Color(rgb=f'{r:02X}{g:02X}{b:02X}'), fill_type='solid')
 
 
-
 # Create a new Excel workbook and add a worksheet
 wb = Workbook()
 ws = wb.active
@@ -86,5 +81,5 @@ for idx in range(args.n_first):
         cell.value = top_similarities_value[column][idx]
         colour = get_color(top_similarities_value[column][idx])
         cell.fill = colour
-
+os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
 wb.save(args.output_file)
