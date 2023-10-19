@@ -133,7 +133,7 @@ class InfraredDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.data[idx]
-        img_id = os.path.splitext(os.path.basename(img_path))[0]
+        img_id = os.path.basename(img_path).rsplit("_", 1)[0]
         positive_patch = self.get_patch(img_path)
 
         anchor_patch = self.get_patch(img_path)

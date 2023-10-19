@@ -9,7 +9,7 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--dataset_dir', type=str, help='Path to the original dataset', required=True)
-parser.add_argument('--ruler_length', type=int, default=700)
+parser.add_argument('--ruler_length', type=int, default=1200)
 parser.add_argument('--output_dir', type=str, help='Path to the output folder', required=True)
 
 args = parser.parse_args()
