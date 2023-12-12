@@ -106,18 +106,19 @@ class GeshaemTrainer(Trainer):
         patch_size = data_conf.img_size
         return GeshaemPatch(data_conf.path, split, transform=transform, image_size=patch_size)
 
-    def get_dataloader(self, mode, dataset, data_conf, repeat):
+    def get_dataloader(self, mode, dataset, data_conf):
         if mode in self.data_loader_registers:
             return self.data_loader_registers[mode]
 
         if mode == 'train':
-            max_dataset_length = len(dataset) * repeat
-            sampler = MPerClassSampler(dataset.data_labels, m=3, length_before_new_iter=max_dataset_length)
+            max_dataset_length = len(dataset) * 10
+            sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
+                                       length_before_new_iter=max_dataset_length)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
                                     drop_last=True, num_workers=data_conf.num_workers)
         else:
             sampler = DistributedRepeatableEvalSampler(dataset, shuffle=False, rank=self.rank,
-                                                       num_replicas=self.world_size, repeat=repeat)
+                                                       num_replicas=self.world_size, repeat=10)
 
             dataloader = DataLoader(dataset, sampler=sampler, batch_size=data_conf.test_batch_size, shuffle=False,
                                     num_workers=data_conf.num_workers, pin_memory=data_conf.pin_memory, drop_last=False)
