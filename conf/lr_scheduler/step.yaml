@@ -1,0 +1,3 @@
+name: step
+decay_epochs: 30    # Epoch interval to decay LR
+decay_rate: 0.1     # LR decay rate

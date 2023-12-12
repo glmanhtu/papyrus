@@ -138,3 +138,5 @@ resources/*.pth
 
 checkpoints
 wandb
+logs
+output

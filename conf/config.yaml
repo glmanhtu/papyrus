@@ -1,0 +1,44 @@
+exp:
+  name: Papyrus Fragment Retrieval
+  description: Measure the distance between papyrus fragments
+  tracking_uri: ???
+  tags:
+    project: geshaem
+
+run:
+  name: ss2-im384
+  run_id:
+  tags:
+    backbone: resnet34
+    network: simsiam
+    mlflow.note.content: ${exp.description}
+
+defaults:
+  - data: geshaem
+  - model: ss2
+  - lr_scheduler: cosine
+  - optimizer: adamw
+  - _self_
+
+mode: train
+amp_enable: True
+print_freq: 20
+save_freq: 1
+seed: 0
+log_dir: logs
+eval:
+  distance_reduction: min
+
+lr_scheduler:
+  warmup_epochs: 5
+  warmup_lr: 5e-7
+  min_lr: 1e-5
+
+train:
+  start_epoch: 0
+  epochs: 150
+  weight_decay: 0.01
+  base_lr: 5e-4
+  clip_grad: 5.0
+  resume: False
+  accumulation_steps: 1

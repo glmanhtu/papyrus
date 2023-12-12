@@ -1,0 +1,8 @@
+name: geshaem
+path: ???
+batch_size: 128
+test_batch_size: 128
+m_per_class: 5
+img_size: 384
+pin_memory: True    # Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.
+num_workers: 4      # Number of data loading threads
