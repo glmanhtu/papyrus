@@ -1,0 +1,7 @@
+type: mixconv
+arch: resnet34
+pretrained: IMAGENET1K_V1
+out_channels: 512
+mix_depth: 4
+out_rows: 1
+layers_freeze: -1

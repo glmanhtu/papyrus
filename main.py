@@ -46,26 +46,22 @@ class GeshaemTrainer(Trainer):
         img_size = data_cfg.img_size
         if mode == 'train':
             return torchvision.transforms.Compose([
-                ACompose([
-                    A.ShiftScaleRotate(shift_limit=0, scale_limit=0.1, rotate_limit=15, p=0.5, value=(255, 255, 255),
-                                       border_mode=cv2.BORDER_CONSTANT)
-                ]),
                 torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=255),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.GaussianBlur((3, 3), (1.0, 2.0)),
                 ], p=0.5),
-                torchvision.transforms.Resize(img_size),
+                torchvision.transforms.RandomCrop(img_size),
                 torchvision.transforms.RandomApply([
-                    torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.3),
+                    torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
                 ]),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
         else:
             return torchvision.transforms.Compose([
-                torchvision.transforms.Resize(img_size),
+                torchvision.transforms.CenterCrop(img_size),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
@@ -118,7 +114,7 @@ class GeshaemTrainer(Trainer):
                                     drop_last=True, num_workers=data_conf.num_workers)
         else:
             sampler = DistributedRepeatableEvalSampler(dataset, shuffle=False, rank=self.rank,
-                                                       num_replicas=self.world_size, repeat=10)
+                                                       num_replicas=self.world_size, repeat=20)
 
             dataloader = DataLoader(dataset, sampler=sampler, batch_size=data_conf.test_batch_size, shuffle=False,
                                     num_workers=data_conf.num_workers, pin_memory=data_conf.pin_memory, drop_last=False)
