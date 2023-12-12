@@ -52,16 +52,17 @@ class GeshaemTrainer(Trainer):
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.GaussianBlur((3, 3), (1.0, 2.0)),
                 ], p=0.5),
-                torchvision.transforms.RandomCrop(img_size),
+                torchvision.transforms.Resize(img_size),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
                 ]),
+                torchvision.transforms.RandomGrayscale(p=0.2),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
         else:
             return torchvision.transforms.Compose([
-                torchvision.transforms.CenterCrop(img_size),
+                torchvision.transforms.Resize(img_size),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
