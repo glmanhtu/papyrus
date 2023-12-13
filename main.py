@@ -103,7 +103,6 @@ class GeshaemTrainer(Trainer):
 
     def load_dataset(self, mode, data_conf, transform):
         split = GeshaemPatch.Split.from_string(mode)
-        patch_size = data_conf.img_size
         return GeshaemPatch(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
 
     def get_dataloader(self, mode, dataset, data_conf):
@@ -111,7 +110,7 @@ class GeshaemTrainer(Trainer):
             return self.data_loader_registers[mode]
 
         if mode == 'train':
-            max_dataset_length = len(dataset) * data_conf.m_per_class * 3
+            max_dataset_length = len(dataset) * data_conf.m_per_class
             sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
                                        length_before_new_iter=max_dataset_length)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
