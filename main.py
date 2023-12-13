@@ -7,7 +7,7 @@ import cv2
 import hydra
 import torch
 import torchvision
-from ml_engine.criterion.losses import NegativeCosineSimilarityLoss
+from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss, BatchDotProduct, NegativeLoss
 from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
 from ml_engine.criterion.triplet import BatchWiseTripletLoss
 from ml_engine.data.samplers import DistributedRepeatableSampler, DistributedRepeatableEvalSampler, MPerClassSampler
@@ -127,8 +127,8 @@ class GeshaemTrainer(Trainer):
 
     def get_criterion(self):
         if self.is_simsiam():
-            return BatchWiseSimSiamLoss()
-        return BatchWiseTripletLoss(margin=0.15)
+            return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss())
+        return DistanceLoss(BatchWiseTripletLoss(margin=0.15), NegativeLoss(BatchDotProduct()))
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
@@ -164,8 +164,9 @@ class GeshaemTrainer(Trainer):
             features.setdefault(target, []).append(feature)
 
         features = {k: torch.stack(v).cuda() for k, v in features.items()}
+        criterion = self.get_criterion()
         distance_df = compute_distance_matrix(features, reduction=self._cfg.eval.distance_reduction,
-                                              distance_fn=NegativeCosineSimilarityLoss())
+                                              distance_fn=criterion.compute_distance)
 
         index_to_fragment = {i: x for i, x in enumerate(data_loader.dataset.fragments)}
         distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
