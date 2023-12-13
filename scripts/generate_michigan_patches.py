@@ -55,7 +55,7 @@ def extract_fragment_info(input_string, default_img_type='COLR'):
             img_type = default_img_type
         else:
             raise Exception(f'Can not extract pattern from input string: {input_string}')
-    return fragment_id, img_type, remaining_text
+    return fragment_id.split("_")[0], img_type, remaining_text
 
 patch_size = args.patch_size
 images = []
