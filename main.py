@@ -46,6 +46,9 @@ class GeshaemTrainer(Trainer):
         img_size = data_cfg.img_size
         if mode == 'train':
             return torchvision.transforms.Compose([
+                ACompose([
+                    A.ShiftScaleRotate(shift_limit=0, scale_limit=0.1, rotate_limit=15, p=0.5)
+                ]),
                 torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=255),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
@@ -101,21 +104,21 @@ class GeshaemTrainer(Trainer):
     def load_dataset(self, mode, data_conf, transform):
         split = GeshaemPatch.Split.from_string(mode)
         patch_size = data_conf.img_size
-        return GeshaemPatch(data_conf.path, split, transform=transform, image_size=patch_size)
+        return GeshaemPatch(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
 
     def get_dataloader(self, mode, dataset, data_conf):
         if mode in self.data_loader_registers:
             return self.data_loader_registers[mode]
 
         if mode == 'train':
-            max_dataset_length = len(dataset) * 10
+            max_dataset_length = len(dataset) * data_conf.m_per_class * 3
             sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
                                        length_before_new_iter=max_dataset_length)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
                                     drop_last=True, num_workers=data_conf.num_workers)
         else:
             sampler = DistributedRepeatableEvalSampler(dataset, shuffle=False, rank=self.rank,
-                                                       num_replicas=self.world_size, repeat=20)
+                                                       num_replicas=self.world_size, repeat=1)
 
             dataloader = DataLoader(dataset, sampler=sampler, batch_size=data_conf.test_batch_size, shuffle=False,
                                     num_workers=data_conf.num_workers, pin_memory=data_conf.pin_memory, drop_last=False)

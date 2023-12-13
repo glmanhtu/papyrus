@@ -61,15 +61,12 @@ class GeshaemPatch(VisionDataset):
         transforms: Optional[Callable] = None,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        image_size=512,
-        fragment_type='R',  # Recto or Verso
+        include_verso=False,
         min_size_limit=300
     ) -> None:
         super().__init__(root, transforms, transform, target_transform)
         self._split = split
         self.root_dir = root
-
-        self.image_size = image_size
 
         self.min_size_limit = min_size_limit
 
@@ -85,7 +82,7 @@ class GeshaemPatch(VisionDataset):
                 for fragment2 in group:
                     self.fragment_to_group.setdefault(fragment, set([])).add(fragment2)
 
-        self.dataset, fragments = self.load_dataset(fragment_type)
+        self.dataset, fragments = self.load_dataset(include_verso)
 
         self.fragments = sorted(fragments)
         self.fragment_idx = {x: i for i, x in enumerate(self.fragments)}
@@ -94,7 +91,7 @@ class GeshaemPatch(VisionDataset):
             fragment_name = os.path.basename(os.path.dirname(os.path.dirname(item)))
             self.data_labels.append(self.fragment_idx[fragment_name])
 
-    def load_dataset(self, fragment_type):
+    def load_dataset(self, include_verso):
         images = []
         fragments = set([])
         for img_path in sorted(glob.glob(os.path.join(self.root_dir, '**', '*.jpg'), recursive=True)):
@@ -108,7 +105,7 @@ class GeshaemPatch(VisionDataset):
 
             image_type = os.path.basename(os.path.dirname(img_path)).rsplit("_", 1)[1].split('-')[0]
             image_type = list(image_type)[-1]
-            if image_type.upper() != fragment_type:
+            if image_type.upper() == 'V' and not include_verso:
                 continue
 
             images.append(img_path)
