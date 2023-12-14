@@ -1,6 +1,7 @@
 type: mixconv
 arch: resnet34
 weights: IMAGENET1K_V1
+pretrained:
 out_channels: 512
 mix_depth: 4
 out_rows: 1
