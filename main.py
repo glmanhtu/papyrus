@@ -82,7 +82,7 @@ class GeshaemTrainer(Trainer):
         elif model_conf.type == 'resnet':
             model = ResNetWrapper(
                 backbone=model_conf.arch,
-                weights=model_conf.pretrained,
+                weights=model_conf.weights,
                 layers_to_freeze=model_conf.layers_freeze)
 
         elif model_conf.type == 'mixconv':
@@ -92,7 +92,7 @@ class GeshaemTrainer(Trainer):
                 out_channels=model_conf.out_channels,
                 mix_depth=model_conf.mix_depth,
                 out_rows=model_conf.out_rows,
-                weights=model_conf.pretrained,
+                weights=model_conf.weights,
                 layers_to_freeze=model_conf.layers_freeze)
 
         else:
