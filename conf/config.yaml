@@ -27,7 +27,7 @@ save_freq: 1
 seed: 0
 log_dir: logs
 eval:
-  distance_reduction: min
+  distance_reduction: mean
 
 lr_scheduler:
   warmup_epochs: 5

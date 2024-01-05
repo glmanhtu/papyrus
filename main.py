@@ -3,26 +3,24 @@ import tempfile
 import time
 
 import albumentations as A
-import cv2
 import hydra
 import torch
 import torchvision
 from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss, BatchDotProduct, NegativeLoss
 from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
 from ml_engine.criterion.triplet import BatchWiseTripletLoss
-from ml_engine.data.samplers import DistributedRepeatableSampler, DistributedRepeatableEvalSampler, MPerClassSampler
+from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix
 from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
 from ml_engine.modelling.resnet import ResNetWrapper, ResNet32MixConv
 from ml_engine.modelling.simsiam import SimSiamV2
-from ml_engine.preprocessing.transforms import ACompose
+from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
 from geshaem_dataset import GeshaemPatch
-from transforms import CustomRandomCrop
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -50,12 +48,13 @@ class GeshaemTrainer(Trainer):
                     A.ShiftScaleRotate(shift_limit=0, scale_limit=0.1, rotate_limit=15, p=0.5)
                 ]),
                 torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=255),
+                torchvision.transforms.RandomCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
+                torchvision.transforms.Resize((img_size, img_size)),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.GaussianBlur((3, 3), (1.0, 2.0)),
                 ], p=0.5),
-                torchvision.transforms.Resize(img_size),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
                 ]),
@@ -65,7 +64,8 @@ class GeshaemTrainer(Trainer):
             ])
         else:
             return torchvision.transforms.Compose([
-                torchvision.transforms.Resize(img_size),
+                PadCenterCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
+                torchvision.transforms.Resize((img_size, img_size)),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
@@ -103,7 +103,8 @@ class GeshaemTrainer(Trainer):
 
     def load_dataset(self, mode, data_conf, transform):
         split = GeshaemPatch.Split.from_string(mode)
-        return GeshaemPatch(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
+        return GeshaemPatch(data_conf.path, split, im_size=data_conf.img_size, transform=transform,
+                            include_verso=data_conf.include_verso)
 
     def get_dataloader(self, mode, dataset, data_conf):
         if mode in self.data_loader_registers:
@@ -127,8 +128,8 @@ class GeshaemTrainer(Trainer):
 
     def get_criterion(self):
         if self.is_simsiam():
-            return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss())
-        return DistanceLoss(BatchWiseTripletLoss(margin=0.15), NegativeLoss(BatchDotProduct()))
+            return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
+        return DistanceLoss(BatchWiseTripletLoss(margin=0.15), NegativeLoss(BatchDotProduct(reduction='none')))
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
