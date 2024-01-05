@@ -48,7 +48,7 @@ class GeshaemTrainer(Trainer):
                     A.ShiftScaleRotate(shift_limit=0, scale_limit=0.1, rotate_limit=15, p=0.5)
                 ]),
                 torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=255),
-                torchvision.transforms.RandomCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
+                torchvision.transforms.RandomCrop((384, 384), pad_if_needed=True, fill=(255, 255, 255)),
                 torchvision.transforms.Resize((img_size, img_size)),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
@@ -64,7 +64,7 @@ class GeshaemTrainer(Trainer):
             ])
         else:
             return torchvision.transforms.Compose([
-                PadCenterCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
+                PadCenterCrop((384, 384), pad_if_needed=True, fill=(255, 255, 255)),
                 torchvision.transforms.Resize((img_size, img_size)),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
@@ -103,7 +103,7 @@ class GeshaemTrainer(Trainer):
 
     def load_dataset(self, mode, data_conf, transform):
         split = GeshaemPatch.Split.from_string(mode)
-        return GeshaemPatch(data_conf.path, split, im_size=data_conf.img_size, transform=transform,
+        return GeshaemPatch(data_conf.path, split, im_size=384, transform=transform,
                             include_verso=data_conf.include_verso)
 
     def get_dataloader(self, mode, dataset, data_conf):
