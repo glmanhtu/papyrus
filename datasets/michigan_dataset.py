@@ -81,6 +81,9 @@ class MichiganDataset(Dataset):
                     data.append((img, fragment))
                     labels.append(self.__label_idxes[img])
 
+            if split.is_val() and len(data) < 2:
+                continue
+
             self.data.extend(data)
             self.data_labels.extend(labels)
 

@@ -11,7 +11,7 @@ from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
 from ml_engine.criterion.triplet import BatchWiseTripletLoss
 from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler
 from ml_engine.engine import Trainer
-from ml_engine.evaluation.distances import compute_distance_matrix
+from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
 from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
 from ml_engine.modelling.resnet import ResNetWrapper, ResNet32MixConv
 from ml_engine.modelling.simsiam import SimSiamV2
@@ -20,6 +20,7 @@ from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
+import wi19_evaluate
 from datasets.geshaem_dataset import GeshaemPatch
 from datasets.michigan_dataset import MichiganDataset
 
@@ -165,23 +166,29 @@ class GeshaemTrainer(Trainer):
         embeddings = torch.cat(embeddings)
         labels = torch.cat(labels)
 
-        # embeddings = F.normalize(embeddings, p=2, dim=1)
-        features = {}
-        for feature, target in zip(embeddings, labels.numpy()):
-            features.setdefault(target, []).append(feature)
-
-        features = {k: torch.stack(v).cuda() for k, v in features.items()}
         criterion = self.get_criterion()
-        distance_df = compute_distance_matrix(features, reduction=self._cfg.eval.distance_reduction,
-                                              distance_fn=criterion.compute_distance)
+        if self._cfg.data.name == 'michigan':
+            distance_matrix = compute_distance_matrix_from_embeddings(embeddings, criterion.compute_distance)
+            self.logger.info(f'N samples: {len(embeddings)}, N categories: {len(torch.unique(labels))}')
+            m_ap, top_1, prk5, prk10 = wi19_evaluate.get_metrics(distance_matrix.numpy(), labels.numpy())
+            distance_df = None
+        else:
+            # embeddings = F.normalize(embeddings, p=2, dim=1)
+            features = {}
+            for feature, target in zip(embeddings, labels.numpy()):
+                features.setdefault(target, []).append(feature)
 
-        index_to_fragment = {i: x for i, x in enumerate(data_loader.dataset.fragments)}
-        distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
+            features = {k: torch.stack(v).cuda() for k, v in features.items()}
+            distance_df = compute_distance_matrix(features, reduction=self._cfg.eval.distance_reduction,
+                                                  distance_fn=criterion.compute_distance)
 
-        positive_pairs = data_loader.dataset.fragment_to_group
+            index_to_fragment = {i: x for i, x in enumerate(data_loader.dataset.fragments)}
+            distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
 
-        distance_mat = distance_df.to_numpy()
-        m_ap, (top_1, prk5, prk10) = calc_map_prak(distance_mat, distance_df.columns, positive_pairs, prak=(1, 5, 10))
+            positive_pairs = data_loader.dataset.fragment_to_group
+
+            distance_mat = distance_df.to_numpy()
+            m_ap, (top_1, prk5, prk10) = calc_map_prak(distance_mat, distance_df.columns, positive_pairs, prak=(1, 5, 10))
 
         m_ap_meter.update(m_ap)
         top1_meter.update(top_1)
@@ -199,10 +206,11 @@ class GeshaemTrainer(Trainer):
         self.log_metrics({'mAP': m_ap, 'top1': top1, 'prak5': pra5, 'prak10': pra10})
         if eval_loss < self._min_loss:
             self.log_metrics({'best_mAP': m_ap, 'best_top1': top1, 'best_prak5': pra5, 'best_prak10': pra10})
-            with tempfile.TemporaryDirectory() as tmp:
-                path = os.path.join(tmp, f'distance_matrix.csv')
-                distance_df.to_csv(path)
-                self._tracker.log_artifact(path, 'best_results')
+            if distance_df is not None:
+                with tempfile.TemporaryDirectory() as tmp:
+                    path = os.path.join(tmp, f'distance_matrix.csv')
+                    distance_df.to_csv(path)
+                    self._tracker.log_artifact(path, 'best_results')
 
         self.logger.info(f'Average: \t mAP {m_ap:.4f}\t top1 {top1:.3f}\t pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
         return eval_loss
