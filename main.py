@@ -13,8 +13,6 @@ from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassS
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
 from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
-from ml_engine.modelling.resnet import ResNetWrapper, ResNet32MixConv
-from ml_engine.modelling.simsiam import SimSiamV2
 from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
@@ -71,37 +69,6 @@ class GeshaemTrainer(Trainer):
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
-
-    def build_model(self, model_conf):
-        if model_conf.type == 'ss2':
-            model = SimSiamV2(
-                arch=model_conf.arch,
-                pretrained=model_conf.pretrained,
-                dim=model_conf.embed_dim,
-                pred_dim=model_conf.pred_dim,
-                dropout=model_conf.dropout)
-
-        elif model_conf.type == 'resnet':
-            model = ResNetWrapper(
-                backbone=model_conf.arch,
-                weights=model_conf.weights,
-                layers_to_freeze=model_conf.layers_freeze)
-
-        elif model_conf.type == 'mixconv':
-            model = ResNet32MixConv(
-                img_size=(self._cfg.data.img_size, self._cfg.data.img_size),
-                backbone=model_conf.arch,
-                out_channels=model_conf.out_channels,
-                mix_depth=model_conf.mix_depth,
-                out_rows=model_conf.out_rows,
-                weights=model_conf.weights,
-                layers_to_freeze=model_conf.layers_freeze)
-
-        else:
-            raise NotImplementedError(f'Network {model_conf.type} is not implemented!')
-
-        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-        return model
 
     def load_dataset(self, mode, data_conf, transform):
         if data_conf.name == 'geshaem':
