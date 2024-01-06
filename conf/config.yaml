@@ -42,3 +42,4 @@ train:
   clip_grad: 5.0
   resume: False
   accumulation_steps: 1
+  triplet_margin: 0.15

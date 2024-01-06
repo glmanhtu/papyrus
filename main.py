@@ -103,7 +103,8 @@ class GeshaemTrainer(Trainer):
     def get_criterion(self):
         if self.is_simsiam():
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
-        return DistanceLoss(BatchWiseTripletLoss(margin=0.15), NegativeLoss(BatchDotProduct(reduction='none')))
+        return DistanceLoss(BatchWiseTripletLoss(margin=self._cfg.train.triplet_margin),
+                            NegativeLoss(BatchDotProduct(reduction='none')))
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
