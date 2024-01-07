@@ -49,7 +49,7 @@ class BatchWiseTripletLoss(torch.nn.Module):
         neg_mask = ~pos_mask
         pos_mask[:, :n] = pos_mask[:, :n] * ~eyes_
 
-        discard_top_n_percent = 0.2
+        discard_top_n_percent = 0.05
 
         loss = list()
         neg_count = list()
@@ -65,6 +65,7 @@ class BatchWiseTripletLoss(torch.nn.Module):
 
                 discard_top_n = int(discard_top_n_percent * neg_pair_.shape[0])
                 neg_pair_ = neg_pair_[max(discard_top_n, 1):]
+
                 select_pos_pair_idx = torch.nonzero(
                     pos_pair_ < neg_pair_[-1] + self.margin
                 ).view(-1)
