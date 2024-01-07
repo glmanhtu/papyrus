@@ -64,7 +64,7 @@ class BatchWiseTripletLoss(torch.nn.Module):
                 neg_pair_ = torch.sort(neg_pair_)[0]
 
                 discard_top_n = int(discard_top_n_percent * neg_pair_.shape[0])
-                neg_pair_ = neg_pair_[max(discard_top_n, 1):]
+                neg_pair_ = neg_pair_[:neg_pair_.shape[0] - max(discard_top_n, 1)]
 
                 select_pos_pair_idx = torch.nonzero(
                     pos_pair_ < neg_pair_[-1] + self.margin
