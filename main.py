@@ -49,7 +49,7 @@ class BatchWiseTripletLoss(torch.nn.Module):
         neg_mask = ~pos_mask
         pos_mask[:, :n] = pos_mask[:, :n] * ~eyes_
 
-        discard_top_n_percent = 0.05
+        discard_top_n_percent = 0.2
 
         loss = list()
         neg_count = list()
