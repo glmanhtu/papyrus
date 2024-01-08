@@ -210,11 +210,11 @@ class GeshaemTrainer(Trainer):
 
         embeddings = torch.cat(embeddings)
         labels = torch.cat(labels)
+        self.logger.info(f'N samples: {len(embeddings)}, N categories: {len(torch.unique(labels))}')
 
         criterion = self.get_criterion()
         if self._cfg.data.name == 'michigan':
             distance_matrix = compute_distance_matrix_from_embeddings(embeddings, criterion.compute_distance)
-            self.logger.info(f'N samples: {len(embeddings)}, N categories: {len(torch.unique(labels))}')
             m_ap, top_1, prk5, prk10 = wi19_evaluate.get_metrics(distance_matrix.numpy(), labels.numpy())
             distance_df = None
         else:
