@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 import wi19_evaluate
-from datasets.geshaem_dataset import GeshaemPatch
+from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
 
 
@@ -144,6 +144,15 @@ class GeshaemTrainer(Trainer):
                                 include_verso=data_conf.include_verso)
         elif data_conf.name == 'michigan':
             return MichiganDataset(data_conf.path, MichiganDataset.Split.from_string(mode), transform, im_size=512)
+        elif data_conf.name == 'merge':
+            michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.from_string(mode), transform,
+                                       im_size=512)
+            geshaem = GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode), im_size=512,
+                                   transform=transform, include_verso=data_conf.include_verso, base_idx=len(michigan))
+            if mode == 'train':
+                return MergeDataset([michigan, geshaem], transform)
+            else:
+                return geshaem
         else:
             raise NotImplementedError(f'Dataset {data_conf.name} not implemented!')
 
