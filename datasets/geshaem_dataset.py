@@ -7,6 +7,7 @@ from typing import Callable, Optional, Union
 
 import imagesize
 import torch
+import torchvision
 from PIL import Image
 from ml_engine.data.grouping import add_items_to_group
 from torch.utils.data import Dataset
@@ -185,6 +186,10 @@ class GeshaemPatch(VisionDataset):
         with Image.open(img_path) as f:
             image = f.convert('RGB')
 
+        new_width, new_height = int(image.width * 0.8), int(image.height * 0.8)
+        resizer = torchvision.transforms.Resize((new_height, new_width))
+
+        image = resizer(image)
         if self.transform:
             image = self.transform(image)
         return image, self.data_labels[index]
