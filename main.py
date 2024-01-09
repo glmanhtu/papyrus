@@ -111,6 +111,10 @@ class GeshaemTrainer(Trainer):
                 ]),
                 torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=255),
                 torchvision.transforms.RandomCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
+                ACompose([
+                    A.CoarseDropout(max_holes=16, min_holes=1, min_height=16, max_height=128, min_width=16, max_width=128,
+                                    fill_value=255, always_apply=True),
+                ]),
                 torchvision.transforms.Resize((img_size, img_size)),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
