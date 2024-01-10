@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import torchvision
 
@@ -12,6 +14,27 @@ def compute_white_percentage(img, ref_size=224):
     white_pixel_count = np.sum(gray > 250)
     total_pixels = gray.shape[0] * gray.shape[1]
     return white_pixel_count / total_pixels
+
+
+class RandomSizedCrop:
+
+    def __init__(self, min_width, min_height, pad_if_needed=False, fill=0, padding_mode='constant'):
+        self.min_width = min_width
+        self.min_height = min_height
+        self.pad_if_needed = pad_if_needed
+        self.fill = fill
+        self.padding_mode = padding_mode
+
+    def __call__(self, image):
+        width, height = image.size
+        if self.min_width < image.width:
+            width = random.randint(self.min_width, image.width)
+        if self.min_height < image.height:
+            height = random.randint(self.min_height, image.height)
+
+        cropper = torchvision.transforms.RandomCrop((height, width), pad_if_needed=self.pad_if_needed,
+                                                    fill=self.fill, padding_mode=self.padding_mode)
+        return cropper(image)
 
 
 class CustomRandomCrop:

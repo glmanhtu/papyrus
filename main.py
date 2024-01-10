@@ -22,6 +22,7 @@ import torch.nn.functional as F
 import wi19_evaluate
 from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
+from transforms import RandomSizedCrop
 
 
 class BatchWiseTripletLoss(torch.nn.Module):
@@ -106,24 +107,24 @@ class GeshaemTrainer(Trainer):
         img_size = data_cfg.img_size
         if mode == 'train':
             return torchvision.transforms.Compose([
-                ACompose([
-                    A.ShiftScaleRotate(shift_limit=0, scale_limit=0.1, rotate_limit=15, p=0.5)
+                torchvision.transforms.RandomApply([
+                    RandomSizedCrop(min_width=224, min_height=224, pad_if_needed=True, fill=(255, 255, 255)),
                 ]),
-                torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=255),
-                torchvision.transforms.RandomCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
-                ACompose([
-                    A.CoarseDropout(max_holes=16, min_holes=1, min_height=16, max_height=128, min_width=16, max_width=128,
-                                    fill_value=255, always_apply=True),
-                ]),
-                torchvision.transforms.Resize((img_size, img_size)),
+                torchvision.transforms.RandomCrop(512, pad_if_needed=True, fill=(255, 255, 255)),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
+                ACompose([
+                    A.CoarseDropout(max_holes=16, min_holes=1, min_height=16, max_height=128, min_width=16,
+                                    max_width=128,
+                                    fill_value=255, always_apply=True),
+                ]),
+                torchvision.transforms.Resize(img_size),
+                torchvision.transforms.RandomApply([
+                    torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.1),
+                ], p=.5),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.GaussianBlur((3, 3), (1.0, 2.0)),
-                ], p=0.5),
-                torchvision.transforms.RandomApply([
-                    torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-                ]),
+                ], p=.5),
                 torchvision.transforms.RandomGrayscale(p=0.2),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
