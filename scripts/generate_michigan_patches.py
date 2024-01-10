@@ -20,16 +20,6 @@ parser.add_argument('--patch-size', type=int, default=384)
 args = parser.parse_args()
 
 
-def compute_white_percentage(img, ref_size=224):
-    gray = img.convert('L')
-    if gray.width > ref_size:
-        gray = gray.resize((ref_size, ref_size))
-    gray = np.asarray(gray)
-    white_pixel_count = np.sum(gray > 180)
-    total_pixels = gray.shape[0] * gray.shape[1]
-    return white_pixel_count / total_pixels
-
-
 patch_size = args.patch_size
 images = []
 for root, dirs, files in os.walk(args.data_path):
@@ -65,24 +55,20 @@ for idx, image_path in enumerate(tqdm.tqdm(images)):
     # # Display the image.
     # ax.imshow(image, cmap='gray')
 
-    i = 0.
-    while i * patch_size <= image.height:
-        j = 0
-        while j * patch_size <= image.width:
-            box = (int(j * patch_size), int(i * patch_size),
-                   min(int((j + 1) * patch_size), image.width), min(int((i + 1) * patch_size), image.height))
-            if box[2] - box[0] > args.min_size_limit and box[3] - box[1] > args.min_size_limit:
-                patch = image.crop(box)
-                patch = cropper(patch)
-                # white_percentage = compute_white_percentage(patch)
-                patch_name = f'{round(i, 2)}_{round(j, 2)}.jpg'
-                patch.save(os.path.join(patch_dir, patch_name))
-                # rect = patches.Rectangle((box[0], box[1]), box[2] - box[0], box[3] - box[1], linewidth=1,
-                #                          facecolor='green', alpha=0.5)
-                # ax.add_patch(rect)
+    n_rows = max(round(image.height / patch_size), 1)
+    n_cols = max(round(image.width / patch_size), 1)
 
-            j += 1.01
-        i += 1.01
-
+    width = image.width // n_cols
+    height = image.height // n_rows
+    for i in range(n_rows):
+        for j in range(n_cols):
+            box = (j * width, i * height, (j + 1) * width, (i + 1) * height)
+            patch = image.crop(box)
+            patch_name = f'{i}_{j}.jpg'
+            patch.save(os.path.join(patch_dir, patch_name))
+    #         rect = patches.Rectangle((box[0], box[1]), box[2] - box[0]-2, box[3] - box[1] - 2, linewidth=1,
+    #                                  facecolor='green', alpha=0.5)
+    #         ax.add_patch(rect)
+    #
     # plt.show()
     # plt.close()
