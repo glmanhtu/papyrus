@@ -47,10 +47,10 @@ class GeshaemTrainer(Trainer):
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
                 ACompose([
-                    A.CoarseDropout(max_holes=8, min_holes=1, min_height=16, max_height=128, min_width=16,
-                                    max_width=128, fill_value=255, p=0.5),
+                    A.CoarseDropout(max_holes=8, min_holes=1, min_height=16, max_height=128, min_width=64,
+                                    max_width=64, fill_value=255, p=0.5),
                 ]),
-                torchvision.transforms.RandomCrop((img_size, img_size)),
+                torchvision.transforms.RandomCrop((img_size, img_size), pad_if_needed=True, fill=(255, 255, 255)),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.1),
                 ], p=.5),
@@ -63,7 +63,7 @@ class GeshaemTrainer(Trainer):
             ])
         else:
             return torchvision.transforms.Compose([
-                PadCenterCrop((img_size, img_size)),
+                PadCenterCrop((img_size, img_size), pad_if_needed=True, fill=(255, 255, 255)),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
