@@ -9,7 +9,6 @@ import torchvision
 from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss, BatchDotProduct, NegativeLoss
 from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
 from ml_engine.criterion.triplet import BatchWiseTripletLoss
-
 from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
@@ -18,12 +17,10 @@ from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
 import wi19_evaluate
 from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
-from transforms import RandomSizedCrop
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -47,14 +44,13 @@ class GeshaemTrainer(Trainer):
         img_size = data_cfg.img_size
         if mode == 'train':
             return torchvision.transforms.Compose([
-                torchvision.transforms.RandomCrop(512, pad_if_needed=True, fill=(255, 255, 255)),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.RandomVerticalFlip(),
                 ACompose([
-                    A.CoarseDropout(max_holes=16, min_holes=1, min_height=16, max_height=128, min_width=16,
-                                    max_width=128, fill_value=255, always_apply=True),
+                    A.CoarseDropout(max_holes=8, min_holes=1, min_height=16, max_height=128, min_width=16,
+                                    max_width=128, fill_value=255, p=0.5),
                 ]),
-                torchvision.transforms.Resize(img_size),
+                torchvision.transforms.RandomCrop((img_size, img_size)),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.1),
                 ], p=.5),
@@ -67,8 +63,7 @@ class GeshaemTrainer(Trainer):
             ])
         else:
             return torchvision.transforms.Compose([
-                PadCenterCrop((512, 512), pad_if_needed=True, fill=(255, 255, 255)),
-                torchvision.transforms.Resize((img_size, img_size)),
+                PadCenterCrop((img_size, img_size)),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
@@ -76,20 +71,19 @@ class GeshaemTrainer(Trainer):
     def load_dataset(self, mode, data_conf, transform):
         if data_conf.name == 'geshaem':
             split = GeshaemPatch.Split.from_string(mode)
-            return GeshaemPatch(data_conf.path, split, im_size=512, transform=transform,
+            return GeshaemPatch(data_conf.path, split, transform=transform,
                                 include_verso=data_conf.include_verso)
         elif data_conf.name == 'michigan':
-            return MichiganDataset(data_conf.path, MichiganDataset.Split.from_string(mode), transform, im_size=512)
+            return MichiganDataset(data_conf.path, MichiganDataset.Split.from_string(mode), transform)
         elif data_conf.name == 'merge':
             if mode == 'train':
-                michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.from_string(mode), transform,
-                                           im_size=512)
-                geshaem = GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode), im_size=512,
+                michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.from_string(mode), transform)
+                geshaem = GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode),
                                        transform=transform, include_verso=data_conf.include_verso, base_idx=len(michigan))
                 return MergeDataset([michigan, geshaem], transform)
             else:
-                return GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode), im_size=512,
-                                    transform=transform, include_verso=data_conf.include_verso)
+                return GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode), transform=transform,
+                                    include_verso=data_conf.include_verso)
         else:
             raise NotImplementedError(f'Dataset {data_conf.name} not implemented!')
 
