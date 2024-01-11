@@ -84,7 +84,7 @@ class GeshaemTrainer(Trainer):
             return MichiganDataset(data_conf.path, MichiganDataset.Split.from_string(mode), transform)
         elif data_conf.name == 'merge':
             if mode == 'train':
-                michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.from_string(mode), transform)
+                michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.ALL, transform)
                 geshaem = GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode),
                                        transform=transform, include_verso=data_conf.include_verso, base_idx=len(michigan))
                 return MergeDataset([michigan, geshaem], transform)
