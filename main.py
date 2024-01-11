@@ -3,6 +3,7 @@ import tempfile
 import time
 
 import albumentations as A
+import cv2
 import hydra
 import torch
 import torchvision
@@ -44,13 +45,16 @@ class GeshaemTrainer(Trainer):
         img_size = data_cfg.img_size
         if mode == 'train':
             return torchvision.transforms.Compose([
-                torchvision.transforms.RandomHorizontalFlip(),
-                torchvision.transforms.RandomVerticalFlip(),
+                torchvision.transforms.RandomAffine(5, translate=(0.1, 0.1), fill=(255, 255, 255)),
                 ACompose([
-                    A.CoarseDropout(max_holes=8, min_holes=1, min_height=16, max_height=64, min_width=16,
-                                    max_width=64, fill_value=255, p=0.5),
+                    A.ShiftScaleRotate(shift_limit=0., scale_limit=0.1, rotate_limit=10, p=0.5, value=(255, 255, 255),
+                                       border_mode=cv2.BORDER_CONSTANT),
                 ]),
-                torchvision.transforms.RandomCrop((img_size, img_size), pad_if_needed=True, fill=(255, 255, 255)),
+                torchvision.transforms.RandomCrop(img_size, pad_if_needed=True, fill=(255, 255, 255)),
+                ACompose([
+                    A.CoarseDropout(max_holes=8, min_holes=1, min_height=16, max_height=64, min_width=16, max_width=64,
+                                    fill_value=255, always_apply=True),
+                ]),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.1),
                 ], p=.5),
@@ -58,6 +62,9 @@ class GeshaemTrainer(Trainer):
                     torchvision.transforms.GaussianBlur((3, 3), (1.0, 2.0)),
                 ], p=.5),
                 torchvision.transforms.RandomGrayscale(p=0.2),
+                ACompose([
+                    A.CLAHE()
+                ]),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
