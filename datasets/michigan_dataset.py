@@ -1,10 +1,8 @@
 import glob
-import math
 import os
 from enum import Enum
 from typing import Union
 
-import imagesize
 from PIL import Image
 from torch.utils.data import Dataset
 
@@ -37,7 +35,7 @@ class _Split(Enum):
 class MichiganDataset(Dataset):
     Split = Union[_Split]
 
-    def __init__(self, dataset_path: str, split: "MichiganDataset.Split", transforms, im_size, min_size=112):
+    def __init__(self, dataset_path: str, split: "MichiganDataset.Split", transforms):
         self.dataset_path = dataset_path
         files = glob.glob(os.path.join(dataset_path, '**', '*.png'), recursive=True)
         files.extend(glob.glob(os.path.join(dataset_path, '**', '*.jpg'), recursive=True))
@@ -45,7 +43,7 @@ class MichiganDataset(Dataset):
         image_map = {}
         for file in files:
             file_name_components = file.split(os.sep)
-            im_name, rv, sum_det, _, im_type, _ = file_name_components[-6:]
+            im_name, rv, sum_det, _, im_type, _, _ = file_name_components[-7:]
             if rv != 'front':
                 continue
             if im_type != 'papyrus':
@@ -72,12 +70,6 @@ class MichiganDataset(Dataset):
         for img in self.labels:
             data, labels = [], []
             for fragment in sorted(images[img]):
-                width, height = imagesize.get(fragment)
-                if width * height < min_size * min_size:
-                    continue
-
-                # ratio = max(round((width * height) / (im_size * im_size)), 1) if split.is_train() else 1
-                # for _ in range(int(ratio)):
                 data.append(fragment)
                 labels.append(self.__label_idxes[img])
 
