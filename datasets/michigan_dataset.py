@@ -44,11 +44,11 @@ class MichiganDataset(Dataset):
         for file in files:
             file_name_components = file.split(os.sep)
             im_name, rv, sum_det, _, im_type, _, _ = file_name_components[-7:]
-            if rv != 'front' and rv != 'unspecified':
+            if rv == 'back':
                 continue
             if im_type != 'papyrus':
                 continue
-            image_map.setdefault(im_name, {}).setdefault(sum_det, []).append(file)
+            image_map.setdefault(im_name, {}).setdefault(sum_det, rv).append(file)
 
         images = {}
         for img in image_map:
@@ -56,8 +56,6 @@ class MichiganDataset(Dataset):
             if key not in image_map[img]:
                 key = 'summary'
             images[img] = image_map[img][key]
-            if 'unspecified' in image_map[img] and split.is_train():
-                images[img] = images[img] + image_map[img]['unspecified']
 
         self.labels = sorted(images.keys())
         self.__label_idxes = {k: i for i, k in enumerate(self.labels)}
