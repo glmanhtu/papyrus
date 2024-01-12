@@ -51,6 +51,8 @@ class GeshaemTrainer(Trainer):
                     A.CoarseDropout(max_holes=8, min_holes=3, min_height=16, max_height=32, min_width=16, max_width=32,
                                     fill_value=255, p=0.8),
                 ]),
+                torchvision.transforms.RandomHorizontalFlip(p=0.5),
+                torchvision.transforms.RandomVerticalFlip(p=0.5),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.1),
                 ], p=.5),

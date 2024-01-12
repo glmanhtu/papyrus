@@ -56,6 +56,8 @@ class MichiganDataset(Dataset):
             if key not in image_map[img]:
                 key = 'summary'
             images[img] = image_map[img][key]
+            if 'unspecified' in image_map[img] and split.is_train():
+                images[img] = images[img] + image_map[img]['unspecified']
 
         self.labels = sorted(images.keys())
         self.__label_idxes = {k: i for i, k in enumerate(self.labels)}
