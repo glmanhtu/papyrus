@@ -48,7 +48,7 @@ class MichiganDataset(Dataset):
                 continue
             if im_type != 'papyrus':
                 continue
-            image_map.setdefault(im_name, {}).setdefault(sum_det, rv).append(file)
+            image_map.setdefault(im_name, {}).setdefault(sum_det, []).append(file)
 
         images = {}
         for img in image_map:
