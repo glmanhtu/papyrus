@@ -44,7 +44,7 @@ class MichiganDataset(Dataset):
         for file in files:
             file_name_components = file.split(os.sep)
             im_name, rv, sum_det, _, im_type, _, _ = file_name_components[-7:]
-            if rv != 'front':
+            if rv != 'front' or rv != 'unspecified':
                 continue
             if im_type != 'papyrus':
                 continue
