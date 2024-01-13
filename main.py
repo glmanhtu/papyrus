@@ -26,6 +26,15 @@ from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
 
 
+class TripletDistanceLoss(BatchWiseTripletDistanceLoss):
+
+    def __init__(self, distance_fn, margin=0.15):
+        super().__init__(distance_fn, margin)
+        self.loss_fn = torch.nn.TripletMarginWithDistanceLoss(margin=margin,
+                                                              distance_function=distance_fn,
+                                                              reduction='sum')
+
+
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def dl_main(cfg: DictConfig):
     tracker = MLFlowTracker(cfg.exp.name, cfg.exp.tracking_uri, tags=cfg.exp.tags)
@@ -116,8 +125,8 @@ class GeshaemTrainer(Trainer):
     def get_criterion(self):
         if self.is_simsiam():
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
-        return DistanceLoss(BatchWiseTripletDistanceLoss(margin=self._cfg.train.triplet_margin,
-                                                         distance_fn=distance_fn), distance_fn=distance_fn)
+        return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
+                            distance_fn=distance_fn)
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
