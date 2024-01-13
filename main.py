@@ -9,7 +9,7 @@ import torch
 import torchvision
 from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss, BatchDotProduct, NegativeLoss
 from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
-from ml_engine.criterion.triplet import BatchWiseTripletLoss
+from ml_engine.criterion.triplet import BatchWiseTripletLoss, BatchWiseTripletDistanceLoss
 from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
@@ -18,6 +18,7 @@ from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 
 import transforms
 import wi19_evaluate
@@ -39,6 +40,10 @@ def dl_main(cfg: DictConfig):
 
         exp_log_dir = os.path.join(cfg.log_dir, cfg.run.name)
         tracker.log_artifacts(exp_log_dir, 'logs')
+
+
+def distance_fn(x, y):
+    return 1.0 - F.cosine_similarity(x, y, dim=-1)
 
 
 class GeshaemTrainer(Trainer):
@@ -111,8 +116,8 @@ class GeshaemTrainer(Trainer):
     def get_criterion(self):
         if self.is_simsiam():
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
-        return DistanceLoss(BatchWiseTripletLoss(margin=self._cfg.train.triplet_margin),
-                            NegativeLoss(BatchDotProduct(reduction='none')))
+        return DistanceLoss(BatchWiseTripletDistanceLoss(margin=self._cfg.train.triplet_margin,
+                                                         distance_fn=distance_fn), distance_fn=distance_fn)
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
