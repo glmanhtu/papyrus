@@ -18,26 +18,11 @@ from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
 import transforms
 import wi19_evaluate
 from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
-
-
-class TripletDistanceLoss(BatchWiseTripletDistanceLoss):
-
-    def __init__(self, distance_fn, margin=0.15):
-        super().__init__(distance_fn, margin)
-        self.loss_fn = torch.nn.TripletMarginWithDistanceLoss(margin=margin,
-                                                              distance_function=distance_fn,
-                                                              reduction='none')
-
-    def forward(self, samples, targets):
-        loss = super().forward(samples, targets)
-        loss = loss[loss > 0.]
-        return loss.mean()
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -54,10 +39,6 @@ def dl_main(cfg: DictConfig):
 
         exp_log_dir = os.path.join(cfg.log_dir, cfg.run.name)
         tracker.log_artifacts(exp_log_dir, 'logs')
-
-
-def distance_fn(x, y):
-    return 1.0 - F.cosine_similarity(x, y, dim=-1)
 
 
 class GeshaemTrainer(Trainer):
@@ -130,8 +111,8 @@ class GeshaemTrainer(Trainer):
     def get_criterion(self):
         if self.is_simsiam():
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
-        return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
-                            distance_fn=distance_fn)
+        return DistanceLoss(BatchWiseTripletLoss(margin=self._cfg.train.triplet_margin),
+                            NegativeLoss(BatchDotProduct(reduction='none')))
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
