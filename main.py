@@ -32,7 +32,12 @@ class TripletDistanceLoss(BatchWiseTripletDistanceLoss):
         super().__init__(distance_fn, margin)
         self.loss_fn = torch.nn.TripletMarginWithDistanceLoss(margin=margin,
                                                               distance_function=distance_fn,
-                                                              reduction='sum')
+                                                              reduction='none')
+
+    def forward(self, samples, targets):
+        loss = super().forward(samples, targets)
+        loss = loss[loss > 0.]
+        return loss.mean()
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -131,13 +136,14 @@ class GeshaemTrainer(Trainer):
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
 
-    def validate_dataloader(self, data_loader):
-        batch_time, m_ap_meter = AverageMeter(), AverageMeter()
-        top1_meter, pk5_meter, pk10_meter = AverageMeter(), AverageMeter(), AverageMeter()
+    def validate_one_epoch(self, dataloader):
+        batch_time = AverageMeter()
+        loss_meter = AverageMeter()
 
+        criterion = self.get_criterion()
         end = time.time()
         embeddings, labels = [], []
-        for idx, (images, targets) in enumerate(data_loader):
+        for idx, (images, targets) in enumerate(dataloader):
             images = images.cuda(non_blocking=True)
 
             # compute output
@@ -145,6 +151,8 @@ class GeshaemTrainer(Trainer):
                 embs = self._model(images)
                 if self.is_simsiam():
                     embs, _ = embs
+                loss = criterion(embs, targets.cuda())
+                loss_meter.update(loss.cpu().item(), images.size(0))
 
             embeddings.append(embs)
             labels.append(targets)
@@ -157,10 +165,9 @@ class GeshaemTrainer(Trainer):
         labels = torch.cat(labels)
         self.logger.info(f'N samples: {len(embeddings)}, N categories: {len(torch.unique(labels))}')
 
-        criterion = self.get_criterion()
         if self._cfg.data.name == 'michigan':
             distance_matrix = compute_distance_matrix_from_embeddings(embeddings, criterion.compute_distance)
-            m_ap, top_1, prk5, prk10 = wi19_evaluate.get_metrics(distance_matrix.numpy(), labels.numpy())
+            m_ap, top1, pra5, pra10 = wi19_evaluate.get_metrics(distance_matrix.numpy(), labels.numpy())
             distance_df = None
         else:
             # embeddings = F.normalize(embeddings, p=2, dim=1)
@@ -172,28 +179,17 @@ class GeshaemTrainer(Trainer):
             distance_df = compute_distance_matrix(features, reduction=self._cfg.eval.distance_reduction,
                                                   distance_fn=criterion.compute_distance)
 
-            index_to_fragment = {i: x for i, x in enumerate(data_loader.dataset.fragments)}
+            index_to_fragment = {i: x for i, x in enumerate(dataloader.dataset.fragments)}
             distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
 
-            positive_pairs = data_loader.dataset.fragment_to_group
+            positive_pairs = dataloader.dataset.fragment_to_group
 
             distance_mat = distance_df.to_numpy()
-            m_ap, (top_1, prk5, prk10) = calc_map_prak(distance_mat, distance_df.columns, positive_pairs, prak=(1, 5, 10))
+            m_ap, (top1, pra5, pra10) = calc_map_prak(distance_mat, distance_df.columns, positive_pairs, prak=(1, 5, 10))
 
-        m_ap_meter.update(m_ap)
-        top1_meter.update(top_1)
-        pk5_meter.update(prk5)
-        pk10_meter.update(prk10)
-
-        AverageMeter.reduces(m_ap_meter, top1_meter, pk5_meter, pk10_meter)
-
-        return m_ap_meter.avg, top1_meter.avg, pk5_meter.avg, pk10_meter.avg, distance_df
-
-    def validate_one_epoch(self, dataloader):
-        m_ap, top1, pra5, pra10, distance_df = self.validate_dataloader(dataloader)
         eval_loss = 1 - m_ap
 
-        self.log_metrics({'mAP': m_ap, 'top1': top1, 'prak5': pra5, 'prak10': pra10})
+        self.log_metrics({'Loss': loss_meter.avg, 'mAP': m_ap, 'top1': top1, 'prak5': pra5, 'prak10': pra10})
         if eval_loss < self._min_loss:
             self.log_metrics({'best_mAP': m_ap, 'best_top1': top1, 'best_prak5': pra5, 'best_prak10': pra10})
             if distance_df is not None:
@@ -202,7 +198,8 @@ class GeshaemTrainer(Trainer):
                     distance_df.to_csv(path)
                     self._tracker.log_artifact(path, 'best_results')
 
-        self.logger.info(f'Average: \t mAP {m_ap:.4f}\t top1 {top1:.3f}\t pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
+        self.logger.info(f'Average: \t loss: {loss_meter.avg:.4f}\t mAP {m_ap:.4f}\t top1 {top1:.3f}\t'
+                         f' pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
         return eval_loss
 
 
