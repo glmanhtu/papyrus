@@ -17,7 +17,7 @@ from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
 from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 import torch.nn.functional as F
 
 import transforms
@@ -66,10 +66,10 @@ class GeshaemTrainer(Trainer):
         if mode == 'train':
             return torchvision.transforms.Compose([
                 torchvision.transforms.RandomCrop(img_size, pad_if_needed=True, fill=(255, 255, 255)),
-                ACompose([
-                    A.CoarseDropout(max_holes=8, min_holes=3, min_height=16, max_height=96, min_width=16, max_width=96,
-                                    fill_value=255, p=0.8),
-                ]),
+                # ACompose([
+                #     A.CoarseDropout(max_holes=8, min_holes=3, min_height=16, max_height=96, min_width=16, max_width=96,
+                #                     fill_value=255, p=0.8),
+                # ]),
                 torchvision.transforms.RandomHorizontalFlip(p=0.5),
                 torchvision.transforms.RandomVerticalFlip(p=0.5),
                 torchvision.transforms.RandomApply([
@@ -99,7 +99,8 @@ class GeshaemTrainer(Trainer):
             if mode == 'train':
                 michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.from_string(mode), transform)
                 geshaem = GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode),
-                                       transform=transform, include_verso=data_conf.include_verso, base_idx=len(michigan))
+                                       transform=transform, include_verso=data_conf.include_verso,
+                                       base_idx=len(michigan.labels))
                 return MergeDataset([michigan, geshaem], transform)
             else:
                 return GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode), transform=transform,
@@ -112,9 +113,12 @@ class GeshaemTrainer(Trainer):
             return self.data_loader_registers[mode]
 
         if mode == 'train':
-            max_dataset_length = len(dataset) * data_conf.m_per_class
-            sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
-                                       length_before_new_iter=max_dataset_length)
+            if data_conf.m_per_class == 0:
+                sampler = RandomSampler(dataset)
+            else:
+                max_dataset_length = len(dataset) * data_conf.m_per_class
+                sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
+                                           length_before_new_iter=max_dataset_length)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
                                     drop_last=True, num_workers=data_conf.num_workers)
         else:
