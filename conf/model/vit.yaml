@@ -1,4 +1,5 @@
 type: vit
 arch: vit_small_patch16_384.augreg_in21k_ft_in1k
 weights: True
+num_classes: 384
 pretrained:
