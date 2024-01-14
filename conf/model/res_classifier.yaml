@@ -1,0 +1,5 @@
+type: res_classifier
+arch: resnet50
+weights: true
+num_classes: 1794
+pretrained:

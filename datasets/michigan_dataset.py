@@ -59,13 +59,13 @@ class MichiganDataset(Dataset):
             images[img] = image_map[img][key]
 
         self.labels = sorted(images.keys())
-        self.__label_idxes = {k: i for i, k in enumerate(self.labels)}
 
         if split == MichiganDataset.Split.TRAIN:
             self.labels = self.labels[: int(len(self.labels) * split.length)]
         else:
             self.labels = self.labels[-int(len(self.labels) * split.length):]
 
+        self.__label_idxes = {k: i for i, k in enumerate(self.labels)}
         self.data = []
         self.data_labels = []
         for img in self.labels:

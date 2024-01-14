@@ -130,11 +130,16 @@ class GeshaemTrainer(Trainer):
     def get_criterion(self):
         if self.is_simsiam():
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
+        elif self.is_classifier():
+            return DistanceLoss(torch.nn.CrossEntropyLoss(), distance_fn=distance_fn)
         return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
                             distance_fn=distance_fn)
 
     def is_simsiam(self):
         return 'ss' in self._cfg.model.type
+
+    def is_classifier(self):
+        return 'classifier' in self._cfg.model.type
 
     def validate_one_epoch(self, dataloader):
         batch_time = AverageMeter()
