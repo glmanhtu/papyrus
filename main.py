@@ -136,7 +136,7 @@ class GeshaemTrainer(Trainer):
                             distance_fn=distance_fn)
 
     def is_simsiam(self):
-        return 'ss' in self._cfg.model.type
+        return 'ss2' in self._cfg.model.type
 
     def is_classifier(self):
         return 'classifier' in self._cfg.model.type
