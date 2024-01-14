@@ -115,6 +115,7 @@ class GeshaemTrainer(Trainer):
         if mode == 'train':
             if data_conf.m_per_class == 0:
                 sampler = RandomSampler(dataset)
+                sampler.set_epoch = lambda x: x
             else:
                 max_dataset_length = len(dataset) * data_conf.m_per_class
                 sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
