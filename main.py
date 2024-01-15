@@ -32,12 +32,7 @@ class TripletDistanceLoss(BatchWiseTripletDistanceLoss):
         super().__init__(distance_fn, margin)
         self.loss_fn = torch.nn.TripletMarginWithDistanceLoss(margin=margin,
                                                               distance_function=distance_fn,
-                                                              reduction='none')
-
-    def forward(self, samples, targets):
-        loss = super().forward(samples, targets)
-        loss = loss[loss > 0.]
-        return loss.mean()
+                                                              reduction='sum')
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -137,8 +132,8 @@ class GeshaemTrainer(Trainer):
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
         elif self.is_classifier():
             return DistanceLoss(torch.nn.CrossEntropyLoss(), distance_fn=distance_fn)
-        return DistanceLoss(BatchWiseTripletLoss(margin=self._cfg.train.triplet_margin),
-                            NegativeLoss(BatchDotProduct(reduction='none')))
+        return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
+                            distance_fn=distance_fn)
 
     def is_simsiam(self):
         return 'ss2' in self._cfg.model.type
