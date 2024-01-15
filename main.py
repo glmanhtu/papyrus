@@ -137,8 +137,8 @@ class GeshaemTrainer(Trainer):
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
         elif self.is_classifier():
             return DistanceLoss(torch.nn.CrossEntropyLoss(), distance_fn=distance_fn)
-        return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
-                            distance_fn=distance_fn)
+        return DistanceLoss(BatchWiseTripletLoss(margin=self._cfg.train.triplet_margin),
+                            NegativeLoss(BatchDotProduct(reduction='none')))
 
     def is_simsiam(self):
         return 'ss2' in self._cfg.model.type
