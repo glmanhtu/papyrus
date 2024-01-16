@@ -84,18 +84,34 @@ class TripletDistanceLoss(torch.nn.Module):
         ).t() == targets.expand(n, targets.shape[0])
         pos_mask[:, :n] = pos_mask[:, :n] * ~eyes_
 
-        pos_groups = []
+        pos_groups, neg_groups = [], []
+        neg_idx = torch.arange(michigan_features.size(0)).cuda()
         for i in range(n):
             it = torch.tensor([i], device=samples.device)
             pos_pair_idx = torch.nonzero(pos_mask[i, i:]).view(-1)
             if pos_pair_idx.shape[0] > 0:
                 pos_combinations = get_combinations(it, pos_pair_idx + i)
-                pos_groups.append(pos_combinations)
+                if pos_combinations.shape[0] > 0:
+                    neg_combinations = get_combinations(it, neg_idx)
+
+                    if pos_combinations.shape[0] < neg_combinations.shape[0]:
+                        pos_combinations = pos_combinations[torch.randint(high=pos_combinations.shape[0],
+                                                                          size=(neg_combinations.shape[0],))]
+                    elif neg_combinations.shape[0] < 1:
+                        continue
+                    elif neg_combinations.shape[0] < pos_combinations.shape[0]:
+                        neg_combinations = neg_combinations[torch.randint(high=neg_combinations.shape[0],
+                                                                          size=(pos_combinations.shape[0],))]
+                    neg_groups.append(neg_combinations)
+                    pos_groups.append(pos_combinations)
 
         pos_groups = torch.cat(pos_groups, dim=0)
+        neg_groups = torch.cat(neg_groups, dim=0)
+
+        assert torch.equal(pos_groups[:, 0], neg_groups[:, 0])
         anchor = samples[pos_groups[:, 0]]
         positive = samples[pos_groups[:, 1]]
-        negative = michigan_features[torch.randint(high=len(michigan_features), size=(len(pos_groups),))]
+        negative = michigan_features[neg_groups[:, 1]]
 
         return self.loss_fn(anchor, positive, negative)
 
