@@ -57,7 +57,7 @@ class BatchWiseTripletDistanceLoss(torch.nn.Module):
                     if pos_combinations.shape[0] < neg_combinations.shape[0]:
                         neg_target_distance = targets[neg_combinations[:, 0]] - targets[neg_combinations[:, 1]]
                         argsort = torch.argsort(torch.abs(neg_target_distance), descending=True)
-                        n_negs = min(pos_combinations.shape[0] * 3, neg_combinations.shape[0])
+                        n_negs = int(0.8 * neg_combinations.shape[0])
                         neg_combinations = neg_combinations[argsort][:n_negs]
                         if n_negs > pos_combinations.shape[0]:
                             pos_combinations = pos_combinations[torch.randint(high=pos_combinations.shape[0],
