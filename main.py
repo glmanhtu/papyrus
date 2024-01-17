@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torchvision
 from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss
 from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
+from ml_engine.criterion.triplet import BatchWiseTripletDistanceLoss
 from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
@@ -25,58 +26,13 @@ from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
 
 
-class BatchWiseTripletDistanceLoss(torch.nn.Module):
+class TripletDistanceLoss(BatchWiseTripletDistanceLoss):
 
     def __init__(self, distance_fn, margin=0.15):
-        super().__init__()
+        super().__init__(distance_fn, margin)
         self.margin = margin
         self.loss_fn = torch.nn.TripletMarginWithDistanceLoss(margin=margin, distance_function=distance_fn,
                                                               reduction='sum')
-
-    def forward(self, samples, targets):
-        n = samples.size(0)
-        # split the positive and negative pairs
-        eyes_ = torch.eye(n, dtype=torch.bool).cuda()
-        pos_mask = targets.expand(
-            targets.shape[0], n
-        ).t() == targets.expand(n, targets.shape[0])
-        neg_mask = ~pos_mask
-        pos_mask[:, :n] = pos_mask[:, :n] * ~eyes_
-
-        pos_groups, neg_groups = [], []
-        for i in range(n):
-            it = torch.tensor([i], device=samples.device)
-            pos_pair_idx = torch.nonzero(pos_mask[i, i:]).view(-1)
-            if pos_pair_idx.shape[0] > 0:
-                pos_combinations = get_combinations(it, pos_pair_idx + i)
-
-                neg_pair_idx = torch.nonzero(neg_mask[i, :]).view(-1)
-                if pos_combinations.shape[0] > 0 and neg_pair_idx.shape[0] > 0:
-                    neg_combinations = get_combinations(it, neg_pair_idx)
-
-                    if pos_combinations.shape[0] < neg_combinations.shape[0]:
-                        neg_target_distance = targets[neg_combinations[:, 0]] - targets[neg_combinations[:, 1]]
-                        argsort = torch.argsort(torch.abs(neg_target_distance), descending=True)
-                        n_negs = int(0.8 * neg_combinations.shape[0])
-                        neg_combinations = neg_combinations[argsort][:n_negs]
-                        if n_negs > pos_combinations.shape[0]:
-                            diff = n_negs - pos_combinations.shape[0]
-                            pos_combinations = torch.cat((pos_combinations,
-                                                          pos_combinations[torch.randint(high=pos_combinations.shape[0],
-                                                                                         size=(diff,))]
-                                                          ))
-                    neg_groups.append(neg_combinations)
-                    pos_groups.append(pos_combinations)
-
-        pos_groups = torch.cat(pos_groups, dim=0)
-        neg_groups = torch.cat(neg_groups, dim=0)
-
-        assert torch.equal(pos_groups[:, 0], neg_groups[:, 0])
-        anchor = samples[pos_groups[:, 0]]
-        positive = samples[pos_groups[:, 1]]
-        negative = samples[neg_groups[:, 1]]
-
-        return self.loss_fn(anchor, positive, negative)
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -176,7 +132,7 @@ class GeshaemTrainer(Trainer):
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
         elif self.is_classifier():
             return DistanceLoss(torch.nn.CrossEntropyLoss(), distance_fn=distance_fn)
-        return DistanceLoss(BatchWiseTripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
+        return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
                             distance_fn=distance_fn)
 
     def is_simsiam(self):
