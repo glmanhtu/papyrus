@@ -37,31 +37,18 @@ class _Split(Enum):
                 return key
 
 
-def parse_name(name: str):
+def parse_name(name: str, is_train: bool):
     groups = re.search(r'^([\w\']+)_([rv])_(\w+)(\s.+)?$', name)
     if groups:
         fragment, rv, col = groups.group(1), groups.group(2), groups.group(3)
+        if is_train:
+            groups = re.search(r'^(\d+)?(\w+)?', fragment)
+            if groups.group(1):
+                fragment = groups.group(1)
+            else:
+                fragment = groups.group(2)
         return fragment, rv, col
     raise ValueError(f"Fragment name {name} not recognized")
-
-
-def extract_relations(dataset_path):
-    """
-    There are some fragments that the papyrologists have put together by hand in the database. These fragments
-    are named using the pattern of <fragment 1>_<fragment 2>_<fragment 3>...
-    Since they belong to the same papyrus, we should put them to the same category
-    @param dataset_path:
-    """
-
-    groups = []
-
-    for img_path in glob.glob(os.path.join(dataset_path, '**', '*.jpg'), recursive=True):
-        image_name = os.path.basename(os.path.dirname(os.path.dirname(img_path)))
-        fragment, rv, col = parse_name(image_name)
-        name_components = fragment.split("_")
-        add_items_to_group(name_components, groups)
-
-    return groups
 
 
 class MergeDataset(Dataset):
@@ -132,7 +119,7 @@ class GeshaemPatch(VisionDataset):
             data, labels = [], []
             for img_path in sorted(fragments[fragment]):
                 image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
-                fragment, rv, col = parse_name(image_name)
+                fragment, rv, col = parse_name(image_name, split.is_train())
                 fragment_ids = fragment.split("_")
                 if fragment_ids[0] not in self.fragment_to_group:
                     continue
@@ -154,7 +141,7 @@ class GeshaemPatch(VisionDataset):
             if img_path.split(os.sep)[-3] != 'papyrus':
                 continue
             image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
-            fragment, rv, col = parse_name(image_name)
+            fragment, rv, col = parse_name(image_name, is_train)
             if rv.upper() == 'V' and not include_verso:
                 continue
 
