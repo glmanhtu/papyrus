@@ -148,7 +148,7 @@ class GeshaemTrainer(Trainer):
         dataset = self.load_dataset(mode, self._cfg.data, self.get_transform(mode, self._cfg.data))
         dataloader = self.get_dataloader(mode, dataset, self._cfg.data)
 
-        embeddings, labels = [], []
+        embeddings, labels = None, None
         for idx, (images, targets) in enumerate(dataloader):
             images = images.cuda(non_blocking=True)
 
@@ -157,12 +157,12 @@ class GeshaemTrainer(Trainer):
                 embs = self._model(images)
                 if self.is_simsiam():
                     embs, _ = embs
-
-            embeddings.append(embs)
-            labels.append(targets)
-
-        embeddings = torch.cat(embeddings)
-        labels = torch.cat(labels)
+            if embeddings is None:
+                embeddings = embs.cpu()
+                labels = targets
+            else:
+                embeddings = torch.cat((embeddings, embs), dim=0)
+                labels = torch.cat((labels, targets), dim=0)
 
         features = {}
         for feature, target in zip(embeddings, labels.numpy()):
