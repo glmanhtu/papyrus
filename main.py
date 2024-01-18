@@ -161,7 +161,7 @@ class GeshaemTrainer(Trainer):
                 embeddings = embs.cpu()
                 labels = targets
             else:
-                embeddings = torch.cat((embeddings, embs), dim=0)
+                embeddings = torch.cat((embeddings, embs.cpu()), dim=0)
                 labels = torch.cat((labels, targets), dim=0)
 
         features = {}
