@@ -133,7 +133,7 @@ class GeshaemPatch(VisionDataset):
         fragment = self.fragments[fragment_id]
         return self.fragment_to_group_id[fragment]
 
-    def remove_duplicate(self, fragment_ids):
+    def remove_duplicate(self, fragment_ids, global_keys):
         keys = {}
         for fragment in fragment_ids:
             groups = re.search(r'^(\d+)?(\w+)?', fragment)
@@ -141,12 +141,17 @@ class GeshaemPatch(VisionDataset):
                 key = groups.group(1)
             else:
                 key = groups.group(2)
+            if key in global_keys:
+                global_keys[key].append(fragment)
+                continue
             keys.setdefault(key, []).append(fragment)
+        global_keys.update(keys)
         return [keys[x][0] for x in keys]
 
     def load_dataset(self, include_verso, min_size_limit, is_train):
         fragments = {}
         groups = []
+        keys = {}
         for img_path in sorted(glob.glob(os.path.join(self.root_dir, '**', '*.jpg'), recursive=True)):
             if img_path.split(os.sep)[-3] != 'papyrus':
                 continue
@@ -158,7 +163,7 @@ class GeshaemPatch(VisionDataset):
             fragment_ids = fragment.split("_")
             if not is_train:
                 # Exclude the pairs in training mode
-                fragment_ids = self.remove_duplicate(fragment_ids)
+                fragment_ids = self.remove_duplicate(fragment_ids, keys)
             add_items_to_group(fragment_ids + [fragment], groups)
             if is_train and len(fragment_ids) > 1:
                 # We exclude the assembled fragments in training to prevent data leaking
