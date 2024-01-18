@@ -134,6 +134,17 @@ class GeshaemPatch(VisionDataset):
         fragment = self.fragments[fragment_id]
         return self.fragment_to_group_id[fragment]
 
+    def remove_duplicate(self, fragment_ids):
+        keys = {}
+        for fragment in fragment_ids:
+            groups = re.search(r'^(\d+)?(\w+)?', fragment)
+            if groups.group(1):
+                key = groups.group(1)
+            else:
+                key = groups.group(2)
+            keys.setdefault(key, []).append(fragment)
+        return [keys[x][0] for x in keys]
+
     def load_dataset(self, include_verso, min_size_limit, is_train):
         fragments = {}
         groups = []
@@ -145,9 +156,12 @@ class GeshaemPatch(VisionDataset):
             if rv.upper() == 'V' and not include_verso:
                 continue
 
-            fragment_ids = fragment.split("_")
-            add_items_to_group(fragment_ids + [fragment], groups)
-            if is_train and len(fragment_ids) > 1:
+            fragment_ids = fragment.split("_") + [fragment]
+            if not is_train:
+                # Exclude the pairs in training mode
+                fragment_ids = self.remove_duplicate(fragment_ids)
+            add_items_to_group(fragment_ids, groups)
+            if is_train and len(fragment_ids) > 2:
                 # We exclude the assembled fragments in training to prevent data leaking
                 continue
 
