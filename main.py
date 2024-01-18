@@ -61,6 +61,7 @@ class GeshaemTrainer(Trainer):
         if mode == 'train':
             return torchvision.transforms.Compose([
                 torchvision.transforms.RandomCrop(img_size, pad_if_needed=True, fill=(255, 255, 255)),
+                torchvision.transforms.RandomResizedCrop(img_size, scale=(0.7, 1.0)),
                 ACompose([
                     A.CoarseDropout(max_holes=32, min_holes=3, min_height=16, max_height=64, min_width=16, max_width=64,
                                     fill_value=255, p=0.9),
@@ -79,6 +80,8 @@ class GeshaemTrainer(Trainer):
         else:
             return torchvision.transforms.Compose([
                 PadCenterCrop((img_size, img_size), pad_if_needed=True, fill=(255, 255, 255)),
+                torchvision.transforms.Resize(int(img_size * 1.15)),
+                torchvision.transforms.CenterCrop(img_size),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
