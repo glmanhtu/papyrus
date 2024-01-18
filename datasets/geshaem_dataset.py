@@ -156,12 +156,12 @@ class GeshaemPatch(VisionDataset):
             if rv.upper() == 'V' and not include_verso:
                 continue
 
-            fragment_ids = fragment.split("_") + [fragment]
+            fragment_ids = fragment.split("_")
             if not is_train:
                 # Exclude the pairs in training mode
                 fragment_ids = self.remove_duplicate(fragment_ids)
-            add_items_to_group(fragment_ids, groups)
-            if is_train and len(fragment_ids) > 2:
+            add_items_to_group(fragment_ids + [fragment], groups)
+            if is_train and len(fragment_ids) > 1:
                 # We exclude the assembled fragments in training to prevent data leaking
                 continue
 
