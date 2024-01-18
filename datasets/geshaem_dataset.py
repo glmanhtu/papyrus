@@ -120,8 +120,7 @@ class GeshaemPatch(VisionDataset):
             for img_path in sorted(fragments[fragment]):
                 image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
                 fragment, rv, col = parse_name(image_name, split.is_train())
-                fragment_ids = fragment.split("_")
-                if fragment_ids[0] not in self.fragment_to_group:
+                if fragment not in self.fragment_to_group:
                     continue
 
                 labels.append(idx + base_idx)
