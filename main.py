@@ -16,7 +16,6 @@ from ml_engine.evaluation.distances import compute_distance_matrix, compute_dist
 from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
 from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
-from ml_engine.utils import get_combinations
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, RandomSampler
 
@@ -42,10 +41,13 @@ def dl_main(cfg: DictConfig):
     with tracker.start_tracking(run_id=cfg.run.run_id, run_name=cfg.run.name, tags=dict(cfg.run.tags)):
         if cfg.mode == 'eval':
             trainer.validate()
-        elif cfg == 'throughput':
+        elif cfg.mode == 'throughput':
             trainer.throughput()
+        elif cfg.mode == 'test':
+            trainer.testing()
         else:
             trainer.train()
+            trainer.testing()
 
         exp_log_dir = os.path.join(cfg.log_dir, cfg.run.name)
         tracker.log_artifacts(exp_log_dir, 'logs')
@@ -140,6 +142,44 @@ class GeshaemTrainer(Trainer):
 
     def is_classifier(self):
         return 'classifier' in self._cfg.model.type
+
+    def testing(self):
+        mode = GeshaemPatch.Split.TEST.value
+        dataset = self.load_dataset(mode, self._cfg.data, self.get_transform(mode, self._cfg.data))
+        dataloader = self.get_dataloader(mode, dataset, self._cfg.data)
+
+        embeddings, labels = [], []
+        for idx, (images, targets) in enumerate(dataloader):
+            images = images.cuda(non_blocking=True)
+
+            # compute output
+            with torch.cuda.amp.autocast(enabled=self._cfg.amp_enable):
+                embs = self._model(images)
+                if self.is_simsiam():
+                    embs, _ = embs
+
+            embeddings.append(embs)
+            labels.append(targets)
+
+        embeddings = torch.cat(embeddings)
+        labels = torch.cat(labels)
+
+        features = {}
+        for feature, target in zip(embeddings, labels.numpy()):
+            features.setdefault(target, []).append(feature)
+
+        criterion = self.get_criterion()
+        features = {k: torch.stack(v).cuda() for k, v in features.items()}
+        distance_df = compute_distance_matrix(features, reduction=self._cfg.eval.distance_reduction,
+                                              distance_fn=criterion.compute_distance)
+
+        index_to_fragment = {i: x for i, x in enumerate(dataloader.dataset.fragments)}
+        distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, f'test_matrix.csv')
+            distance_df.to_csv(path)
+            self._tracker.log_artifact(path, 'best_results')
 
     def validate_one_epoch(self, dataloader):
         batch_time = AverageMeter()

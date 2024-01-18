@@ -1,13 +1,10 @@
 import glob
-import math
 import os
 import re
 from enum import Enum
 from typing import Callable, Optional, Union
 
 import imagesize
-import torch
-import torchvision
 from PIL import Image
 from ml_engine.data.grouping import add_items_to_group
 from torch.utils.data import Dataset
@@ -97,7 +94,7 @@ class GeshaemPatch(VisionDataset):
         self.fragment_to_group = {}
         self.fragment_to_group_id = {}
 
-        fragments, groups = self.load_dataset(include_verso, min_size_limit, split.is_train())
+        fragments, groups = self.load_dataset(include_verso, min_size_limit, split)
 
         for idx, group in enumerate(groups):
             if len(group) < 2 and split.is_val():
@@ -148,7 +145,7 @@ class GeshaemPatch(VisionDataset):
         global_keys.update(keys)
         return [keys[x][0] for x in keys]
 
-    def load_dataset(self, include_verso, min_size_limit, is_train):
+    def load_dataset(self, include_verso, min_size_limit, split: _Split):
         fragments = {}
         groups = []
         keys = {}
@@ -156,16 +153,16 @@ class GeshaemPatch(VisionDataset):
             if img_path.split(os.sep)[-3] != 'papyrus':
                 continue
             image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
-            fragment, rv, col = parse_name(image_name, is_train)
+            fragment, rv, col = parse_name(image_name, split.is_train())
             if rv.upper() == 'V' and not include_verso:
                 continue
 
             fragment_ids = fragment.split("_")
-            if not is_train:
-                # Exclude the pairs in training mode
+            if split.is_val():
+                # Exclude the pairs that has been trained in training mode
                 fragment_ids = self.remove_duplicate(fragment_ids, keys)
             add_items_to_group(fragment_ids + [fragment], groups)
-            if is_train and len(fragment_ids) > 1:
+            if split.is_train() and len(fragment_ids) > 1:
                 # We exclude the assembled fragments in training to prevent data leaking
                 continue
 
