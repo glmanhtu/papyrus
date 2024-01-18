@@ -143,6 +143,7 @@ class GeshaemTrainer(Trainer):
     def is_classifier(self):
         return 'classifier' in self._cfg.model.type
 
+    @torch.no_grad()
     def testing(self):
         mode = GeshaemPatch.Split.TEST.value
         dataset = self.load_dataset(mode, self._cfg.data, self.get_transform(mode, self._cfg.data))
