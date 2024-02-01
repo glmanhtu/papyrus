@@ -61,9 +61,9 @@ class GeshaemTrainer(Trainer):
         if mode == 'train':
             return torchvision.transforms.Compose([
                 torchvision.transforms.RandomCrop(img_size, pad_if_needed=True, fill=(255, 255, 255)),
-                torchvision.transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),
+                torchvision.transforms.RandomResizedCrop(img_size, scale=(0.5, 1.0)),
                 ACompose([
-                    A.CoarseDropout(max_holes=32, min_holes=3, min_height=16, max_height=64, min_width=16, max_width=64,
+                    A.CoarseDropout(max_holes=16, min_holes=3, min_height=16, max_height=64, min_width=16, max_width=64,
                                     fill_value=255, p=0.9),
                 ]),
                 torchvision.transforms.RandomHorizontalFlip(p=0.5),
@@ -146,7 +146,6 @@ class GeshaemTrainer(Trainer):
 
     def validate_one_epoch(self, dataloader):
         batch_time = AverageMeter()
-        loss_meter = AverageMeter()
 
         criterion = self.get_criterion()
         end = time.time()
@@ -159,8 +158,6 @@ class GeshaemTrainer(Trainer):
                 embs = self._model(images)
                 if self.is_simsiam():
                     embs, _ = embs
-            loss = criterion(embs, targets.cuda())
-            loss_meter.update(loss.cpu().item(), images.size(0))
 
             embeddings.append(embs)
             labels.append(targets)
@@ -197,7 +194,7 @@ class GeshaemTrainer(Trainer):
 
         eval_loss = 1 - m_ap
 
-        self.log_metrics({'Loss': loss_meter.avg, 'mAP': m_ap, 'top1': top1, 'prak5': pra5, 'prak10': pra10})
+        self.log_metrics({'mAP': m_ap, 'top1': top1, 'prak5': pra5, 'prak10': pra10})
         if eval_loss < self._min_loss:
             self.log_metrics({'best_mAP': m_ap, 'best_top1': top1, 'best_prak5': pra5, 'best_prak10': pra10})
             if distance_df is not None:
@@ -206,8 +203,7 @@ class GeshaemTrainer(Trainer):
                     distance_df.to_csv(path)
                     self._tracker.log_artifact(path, 'best_results')
 
-        self.logger.info(f'Average: \t loss: {loss_meter.avg:.4f}\t mAP {m_ap:.4f}\t top1 {top1:.3f}\t'
-                         f' pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
+        self.logger.info(f'Average: \t mAP {m_ap:.4f}\t top1 {top1:.3f}\t pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
         return eval_loss
 
 
