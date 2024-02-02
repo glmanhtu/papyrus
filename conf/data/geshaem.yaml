@@ -2,7 +2,8 @@ name: geshaem
 path: ???
 batch_size: 64
 test_batch_size: 64
-m_per_class: 5
+m_per_class: 3
+data_repeat: 20
 include_verso: False
 img_size: 384
 pin_memory: True    # Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.

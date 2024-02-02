@@ -115,7 +115,7 @@ class GeshaemTrainer(Trainer):
                 sampler = RandomSampler(dataset)
                 sampler.set_epoch = lambda x: x
             else:
-                max_dataset_length = len(dataset) * data_conf.m_per_class
+                max_dataset_length = len(dataset) * data_conf.data_repeat
                 sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
                                            length_before_new_iter=max_dataset_length)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
