@@ -10,13 +10,12 @@ import torchvision
 from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss
 from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
 from ml_engine.criterion.triplet import BatchWiseTripletDistanceLoss
-from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler
+from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler, DistributedSamplerWrapper
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
 from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
 from ml_engine.preprocessing.transforms import ACompose, PadCenterCrop
 from ml_engine.tracking.mlflow_tracker import MLFlowTracker
-from ml_engine.utils import get_combinations
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, RandomSampler
 
@@ -24,15 +23,6 @@ import transforms
 import wi19_evaluate
 from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
 from datasets.michigan_dataset import MichiganDataset
-
-
-class TripletDistanceLoss(BatchWiseTripletDistanceLoss):
-
-    def __init__(self, distance_fn, margin=0.15):
-        super().__init__(distance_fn, margin)
-        self.margin = margin
-        self.loss_fn = torch.nn.TripletMarginWithDistanceLoss(margin=margin, distance_function=distance_fn,
-                                                              reduction='sum')
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -61,10 +51,10 @@ class GeshaemTrainer(Trainer):
         if mode == 'train':
             return torchvision.transforms.Compose([
                 torchvision.transforms.RandomCrop(img_size, pad_if_needed=True, fill=(255, 255, 255)),
-                torchvision.transforms.RandomResizedCrop(img_size, scale=(0.5, 1.0)),
+                torchvision.transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),
                 ACompose([
-                    A.CoarseDropout(max_holes=16, min_holes=3, min_height=16, max_height=64, min_width=16, max_width=64,
-                                    fill_value=255, p=0.9),
+                    A.CoarseDropout(max_holes=16, min_holes=1, min_height=16, max_height=64, min_width=16, max_width=64,
+                                    fill_value=255, p=0.8),
                 ]),
                 torchvision.transforms.RandomHorizontalFlip(p=0.5),
                 torchvision.transforms.RandomVerticalFlip(p=0.5),
@@ -80,7 +70,7 @@ class GeshaemTrainer(Trainer):
         else:
             return torchvision.transforms.Compose([
                 PadCenterCrop((img_size, img_size), pad_if_needed=True, fill=(255, 255, 255)),
-                torchvision.transforms.Resize(int(img_size * 1.15)),
+                torchvision.transforms.Resize(int(img_size * 1.2)),
                 torchvision.transforms.CenterCrop(img_size),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
@@ -118,13 +108,12 @@ class GeshaemTrainer(Trainer):
                 max_dataset_length = len(dataset) * data_conf.data_repeat
                 sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
                                            length_before_new_iter=max_dataset_length)
+                sampler = DistributedSamplerWrapper(sampler, self.world_size, self.rank, shuffle=True)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
                                     drop_last=True, num_workers=data_conf.num_workers)
         else:
-            sampler = DistributedRepeatableEvalSampler(dataset, shuffle=False, rank=self.rank,
-                                                       num_replicas=self.world_size, repeat=1)
-
-            dataloader = DataLoader(dataset, sampler=sampler, batch_size=data_conf.test_batch_size, shuffle=False,
+            # We don't apply distributed sampler here because the validating set is not large
+            dataloader = DataLoader(dataset, batch_size=data_conf.test_batch_size, shuffle=False,
                                     num_workers=data_conf.num_workers, pin_memory=data_conf.pin_memory, drop_last=False)
 
         self.data_loader_registers[mode] = dataloader
@@ -135,7 +124,8 @@ class GeshaemTrainer(Trainer):
             return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
         elif self.is_classifier():
             return DistanceLoss(torch.nn.CrossEntropyLoss(), distance_fn=distance_fn)
-        return DistanceLoss(TripletDistanceLoss(margin=self._cfg.train.triplet_margin, distance_fn=distance_fn),
+        return DistanceLoss(BatchWiseTripletDistanceLoss(margin=self._cfg.train.triplet_margin,
+                                                         distance_fn=distance_fn, reduction='sum'),
                             distance_fn=distance_fn)
 
     def is_simsiam(self):
