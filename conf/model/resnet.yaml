@@ -1,5 +1,5 @@
 type: resnet
 arch: resnet34
-weights: IMAGENET1K_V1
-pretrained:
+weights:
+pretrained: IMAGENET1K_V1
 layers_freeze: -1

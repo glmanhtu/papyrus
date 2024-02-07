@@ -1,16 +1,15 @@
 import os
-import tempfile
 import time
+from functools import lru_cache
 
 import albumentations as A
 import hydra
 import torch
 import torch.nn.functional as F
 import torchvision
-from ml_engine.criterion.losses import NegativeCosineSimilarityLoss, DistanceLoss
-from ml_engine.criterion.simsiam import BatchWiseSimSiamLoss
+from ml_engine.criterion.losses import DistanceLoss
 from ml_engine.criterion.triplet import BatchWiseTripletDistanceLoss
-from ml_engine.data.samplers import DistributedRepeatableEvalSampler, MPerClassSampler, DistributedSamplerWrapper
+from ml_engine.data.samplers import MPerClassSampler, DistributedSamplerWrapper
 from ml_engine.engine import Trainer
 from ml_engine.evaluation.distances import compute_distance_matrix, compute_distance_matrix_from_embeddings
 from ml_engine.evaluation.metrics import AverageMeter, calc_map_prak
@@ -21,7 +20,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 import transforms
 import wi19_evaluate
-from datasets.geshaem_dataset import GeshaemPatch, MergeDataset
+from datasets.geshaem_dataset import GeshaemPatch
 from datasets.michigan_dataset import MichiganDataset
 
 
@@ -79,27 +78,14 @@ class GeshaemTrainer(Trainer):
     def load_dataset(self, mode, data_conf, transform):
         if data_conf.name == 'geshaem':
             split = GeshaemPatch.Split.from_string(mode)
-            return GeshaemPatch(data_conf.path, split, transform=transform,
-                                include_verso=data_conf.include_verso)
+            return GeshaemPatch(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
         elif data_conf.name == 'michigan':
             return MichiganDataset(data_conf.path, MichiganDataset.Split.from_string(mode), transform)
-        elif data_conf.name == 'merge':
-            if mode == 'train':
-                michigan = MichiganDataset(data_conf.path_michigan, MichiganDataset.Split.from_string(mode), transform)
-                geshaem = GeshaemPatch(data_conf.path_geshaem, GeshaemPatch.Split.from_string(mode),
-                                       transform=transform, include_verso=data_conf.include_verso,
-                                       base_idx=len(michigan.groups))
-                return MergeDataset([michigan, geshaem], transform)
-            else:
-                return GeshaemPatch(data_conf.path_geshaem,  GeshaemPatch.Split.from_string(mode), transform=transform,
-                                    include_verso=data_conf.include_verso)
         else:
             raise NotImplementedError(f'Dataset {data_conf.name} not implemented!')
 
+    @lru_cache
     def get_dataloader(self, mode, dataset, data_conf):
-        if mode in self.data_loader_registers:
-            return self.data_loader_registers[mode]
-
         if mode == 'train':
             if data_conf.m_per_class == 0:
                 sampler = RandomSampler(dataset)
@@ -116,23 +102,16 @@ class GeshaemTrainer(Trainer):
             dataloader = DataLoader(dataset, batch_size=data_conf.test_batch_size, shuffle=False,
                                     num_workers=data_conf.num_workers, pin_memory=data_conf.pin_memory, drop_last=False)
 
-        self.data_loader_registers[mode] = dataloader
         return dataloader
 
     def get_criterion(self):
-        if self.is_simsiam():
-            return DistanceLoss(BatchWiseSimSiamLoss(), NegativeCosineSimilarityLoss(reduction='none'))
-        elif self.is_classifier():
-            return DistanceLoss(torch.nn.CrossEntropyLoss(), distance_fn=distance_fn)
-        return DistanceLoss(BatchWiseTripletDistanceLoss(margin=self._cfg.train.triplet_margin,
-                                                         distance_fn=distance_fn, reduction='sum'),
-                            distance_fn=distance_fn)
+        return DistanceLoss(
+            BatchWiseTripletDistanceLoss(distance_fn, margin=self._cfg.train.triplet_margin, reduction='sum'),
+            distance_fn=distance_fn
+        )
 
-    def is_simsiam(self):
-        return 'ss2' in self._cfg.model.type
-
-    def is_classifier(self):
-        return 'classifier' in self._cfg.model.type
+    def output_mapping(self, output):
+        return output
 
     def validate_one_epoch(self, dataloader):
         batch_time = AverageMeter()
@@ -146,8 +125,7 @@ class GeshaemTrainer(Trainer):
             # compute output
             with torch.cuda.amp.autocast(enabled=self._cfg.amp_enable):
                 embs = self._model(images)
-                if self.is_simsiam():
-                    embs, _ = embs
+                embs = self.output_mapping(embs)
 
             embeddings.append(embs)
             labels.append(targets)
@@ -177,10 +155,10 @@ class GeshaemTrainer(Trainer):
             index_to_fragment = {i: x for i, x in enumerate(dataloader.dataset.fragments)}
             distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
 
-            positive_pairs = dataloader.dataset.fragment_to_group
+            pos_pairs = dataloader.dataset.fragment_to_group
 
             distance_mat = distance_df.to_numpy()
-            m_ap, (top1, pra5, pra10) = calc_map_prak(distance_mat, distance_df.columns, positive_pairs, prak=(1, 5, 10))
+            m_ap, (top1, pra5, pra10) = calc_map_prak(distance_mat, distance_df.columns, pos_pairs, prak=(1, 5, 10))
 
         eval_loss = 1 - m_ap
 
@@ -188,10 +166,7 @@ class GeshaemTrainer(Trainer):
         if eval_loss < self._min_loss:
             self.log_metrics({'best_mAP': m_ap, 'best_top1': top1, 'best_prak5': pra5, 'best_prak10': pra10})
             if distance_df is not None:
-                with tempfile.TemporaryDirectory() as tmp:
-                    path = os.path.join(tmp, f'distance_matrix.csv')
-                    distance_df.to_csv(path)
-                    self._tracker.log_artifact(path, 'best_results')
+                self._tracker.log_table_as_csv(distance_df, 'best_results', 'distance_matrix.csv')
 
         self.logger.info(f'Average: \t mAP {m_ap:.4f}\t top1 {top1:.3f}\t pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
         return eval_loss

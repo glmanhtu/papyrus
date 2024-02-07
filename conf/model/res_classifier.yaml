@@ -1,5 +1,0 @@
-type: res_classifier
-arch: resnet50.a1_in1k
-weights: true
-num_classes: 1794
-pretrained:
