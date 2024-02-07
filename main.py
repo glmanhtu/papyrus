@@ -108,7 +108,7 @@ class GeshaemTrainer(Trainer):
                 max_dataset_length = len(dataset) * data_conf.data_repeat
                 sampler = MPerClassSampler(dataset.data_labels, m=data_conf.m_per_class,
                                            length_before_new_iter=max_dataset_length)
-                sampler = DistributedSamplerWrapper(sampler, self.world_size, self.rank, shuffle=True)
+                sampler = DistributedSamplerWrapper(sampler, self.world_size, self.rank, shuffle=False)
             dataloader = DataLoader(dataset, sampler=sampler, pin_memory=True, batch_size=data_conf.batch_size,
                                     drop_last=True, num_workers=data_conf.num_workers)
         else:
