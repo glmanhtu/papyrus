@@ -23,6 +23,8 @@ def dl_main(cfg: DictConfig):
 
         exp_log_dir = os.path.join(cfg.log_dir, cfg.run.name)
         tracker.log_artifacts(exp_log_dir, 'logs')
+    del trainer
+    del tracker
 
 
 class GeshaemSimsiamTrainer(GeshaemTrainer):
