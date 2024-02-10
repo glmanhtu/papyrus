@@ -1,5 +1,5 @@
 type: resnet
-arch: resnet34
+arch: resnet50.a1_in1k
+pretrained: True
+num_classes: 512
 weights:
-pretrained: IMAGENET1K_V1
-layers_freeze: -1
