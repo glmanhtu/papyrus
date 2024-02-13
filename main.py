@@ -20,8 +20,8 @@ from torch.utils.data import DataLoader, RandomSampler
 
 import transforms
 import wi19_evaluate
-from datasets.geshaem_dataset import GeshaemPatch
-from datasets.geshaem_dataset_v2 import GeshaemPatchV2, Geshaem
+from datasets.geshaem_dataset import GeshaemPatch, Geshaem
+from datasets.geshaem_dataset_v2 import GeshaemPatchV2
 from datasets.michigan_dataset import MichiganDataset
 
 

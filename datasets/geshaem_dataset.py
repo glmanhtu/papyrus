@@ -88,6 +88,108 @@ class MergeDataset(Dataset):
         return image, label
 
 
+class Geshaem(VisionDataset):
+    Target = Union[_Target]
+    Split = Union[_Split]
+
+    def __init__(
+        self,
+        root: str,
+        split: "Geshaem.Split",
+        transforms: Optional[Callable] = None,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        include_verso=False,
+        min_size_limit=112,
+        base_idx=0
+    ) -> None:
+        super().__init__(root, transforms, transform, target_transform)
+        self._split = split
+        self.root_dir = root
+
+        self.fragment_to_group = {}
+        self.fragment_to_group_id = {}
+
+        fragments, groups = self.load_dataset(include_verso, min_size_limit, split.is_train())
+
+        for idx, group in enumerate(groups):
+            if len(group) < 2 and split.is_val():
+                # We only evaluate the fragments that we know they are belongs to a certain groups
+                # If the group have only one element, which means that very likely that we don't know
+                # which group this element belongs to, so we skip it
+                continue
+            for fragment in group:
+                self.fragment_to_group_id[fragment] = idx
+                for fragment2 in group:
+                    self.fragment_to_group.setdefault(fragment, set([])).add(fragment2)
+
+        self.fragments = sorted(fragments.keys())
+        self.fragment_idx = {x: i for i, x in enumerate(self.fragments)}
+
+        self.data = []
+        self.data_labels = []
+        for idx, fragment in enumerate(self.fragments):
+            data, labels = [], []
+            for img_path in sorted(fragments[fragment]):
+                image_name = os.path.basename(os.path.dirname(os.path.dirname(img_path)))
+                fragment, rv, col = parse_name(image_name)
+                fragment_ids = fragment.split("_")
+                if fragment_ids[0] not in self.fragment_to_group:
+                    continue
+
+                labels.append(idx + base_idx)
+                data.append(img_path)
+
+            self.data.extend(data)
+            self.data_labels.extend(labels)
+
+    def get_group_id(self, fragment_id: int) -> int:
+        fragment = self.fragments[fragment_id]
+        return self.fragment_to_group_id[fragment]
+
+    def load_dataset(self, include_verso, min_size_limit, is_train):
+        fragments = {}
+        groups = []
+        for img_path in sorted(glob.glob(os.path.join(self.root_dir, '**', '*.jpg'), recursive=True)):
+            if img_path.split(os.sep)[-2] != 'papyrus':
+                continue
+            image_name = os.path.basename(os.path.dirname(os.path.dirname(img_path)))
+            fragment, rv, col = parse_name(image_name)
+            if rv.upper() == 'V' and not include_verso:
+                continue
+
+            fragment_ids = fragment.split("_")
+            add_items_to_group(fragment_ids + [fragment], groups)
+            if is_train and len(fragment_ids) > 1:
+                # We exclude the assembled fragments in training to prevent data leaking
+                continue
+
+            width, height = imagesize.get(img_path)
+            if width * height < min_size_limit * min_size_limit:
+                continue
+
+            fragments.setdefault(fragment, []).append(img_path)
+
+        return fragments, groups
+
+    @property
+    def split(self) -> "GeshaemPatch.Split":
+        return self._split
+
+    def __getitem__(self, index: int):
+        img_path = self.data[index]
+
+        with Image.open(img_path) as f:
+            image = f.convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+        return image, self.data_labels[index]
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+
 class GeshaemPatch(VisionDataset):
     Target = Union[_Target]
     Split = Union[_Split]
