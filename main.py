@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader, RandomSampler
 import transforms
 import wi19_evaluate
 from datasets.geshaem_dataset import GeshaemPatch
-from datasets.geshaem_dataset_v2 import GeshaemPatchV2
+from datasets.geshaem_dataset_v2 import GeshaemPatchV2, Geshaem
 from datasets.michigan_dataset import MichiganDataset
 
 
@@ -79,7 +79,10 @@ class GeshaemTrainer(Trainer):
             ])
 
     def load_dataset(self, mode, data_conf, transform):
-        if data_conf.name == 'geshaem' and data_conf.version == 1:
+        if data_conf.name == 'geshaem' and data_conf.version == 0:
+            split = Geshaem.Split.from_string(mode)
+            return Geshaem(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
+        elif data_conf.name == 'geshaem' and data_conf.version == 1:
             split = GeshaemPatch.Split.from_string(mode)
             return GeshaemPatch(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
         elif data_conf.name == 'geshaem' and data_conf.version == 2:
