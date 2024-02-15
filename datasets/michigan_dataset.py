@@ -47,8 +47,8 @@ class MichiganDataset(Dataset):
             file_name_components = file.split(os.sep)
             im_name, rv, sum_det, sub_name, im_type, _, _ = file_name_components[-7:]
             add_items_to_group([im_name, sub_name], groups)
-            if rv != 'front':
-                continue
+            # if rv != 'front':
+            #     continue
             if im_type != 'papyrus':
                 continue
             image_map.setdefault(im_name, {}).setdefault(sum_det, []).append(file)
