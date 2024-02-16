@@ -27,7 +27,7 @@ from datasets.michigan_dataset import MichiganDataset
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def dl_main(cfg: DictConfig):
-    tracker = MLFlowTracker(cfg.exp.name, cfg.exp.tracking_uri, rank=0, tags=cfg.exp.tags)
+    tracker = MLFlowTracker(cfg.exp.name, cfg.exp.tracking_uri, rank=0, tags=cfg.exp.tags, enabled=cfg.tracking_enable)
     trainer = GeshaemTrainer(cfg, tracker)
     with tracker.start_tracking(run_id=cfg.run.run_id, run_name=cfg.run.name, tags=dict(cfg.run.tags)):
         if cfg.mode == 'eval':

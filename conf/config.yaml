@@ -22,6 +22,7 @@ defaults:
 
 mode: train
 amp_enable: True
+tracking_enable: True
 print_freq: 20
 save_freq: 1
 seed: 0
