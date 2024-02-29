@@ -32,6 +32,8 @@ def dl_main(cfg: DictConfig):
     with tracker.start_tracking(run_id=cfg.run.run_id, run_name=cfg.run.name, tags=dict(cfg.run.tags)):
         if cfg.mode == 'eval':
             trainer.validate()
+        elif cfg.mode == 'test':
+            trainer.testing()
         elif cfg == 'throughput':
             trainer.throughput()
         else:
@@ -116,7 +118,17 @@ class GeshaemTrainer(Trainer):
     def output_mapping(self, output):
         return output
 
-    def validate_one_epoch(self, dataloader):
+    @torch.no_grad()
+    def testing(self, mode='test'):
+        self._model.eval()
+        dataset = self.load_dataset(mode, self._cfg.data, self.get_transform(mode, self._cfg.data))
+        self.logger.info(f"Test data size: {len(dataset)}")
+
+        data_loader = self.get_dataloader(mode, dataset, self._cfg.data)
+        distance_df = self.validate_one_epoch(data_loader, mode)
+        self._tracker.log_table_as_csv(distance_df, 'best_results', 'final_distance_matrix.csv')
+
+    def validate_one_epoch(self, dataloader, mode="validation"):
         batch_time = AverageMeter()
 
         criterion = self.get_criterion()
@@ -157,6 +169,9 @@ class GeshaemTrainer(Trainer):
 
             index_to_fragment = {i: x for i, x in enumerate(dataloader.dataset.fragments)}
             distance_df.rename(columns=index_to_fragment, index=index_to_fragment, inplace=True)
+
+            if mode != 'validation':
+                return distance_df
 
             pos_pairs = dataloader.dataset.fragment_to_group
 
