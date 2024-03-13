@@ -102,7 +102,8 @@ class GeshaemPatchV2(VisionDataset):
         target_transform: Optional[Callable] = None,
         include_verso=False,
         min_size_limit=112,
-        base_idx=0
+        base_idx=0,
+        data_filter=None
     ) -> None:
         """
         Version 2 for Geshaem dataset
@@ -116,7 +117,7 @@ class GeshaemPatchV2(VisionDataset):
         self.fragment_to_group = {}
         self.fragment_to_group_id = {}
 
-        fragments, groups = self.load_dataset(include_verso, min_size_limit, split)
+        fragments, groups = self.load_dataset(include_verso, min_size_limit, split, data_filter)
 
         for idx, group in enumerate(groups):
             if len(group) < 2 and split.is_val():
@@ -152,7 +153,7 @@ class GeshaemPatchV2(VisionDataset):
         fragment = self.fragments[fragment_id]
         return self.fragment_to_group_id[fragment]
 
-    def load_dataset(self, include_verso, min_size_limit, split: _Split):
+    def load_dataset(self, include_verso, min_size_limit, split: _Split, data_filter):
         fragments = {}
         groups = []
         keys = {}
@@ -163,7 +164,11 @@ class GeshaemPatchV2(VisionDataset):
             fragment, rv, col = parse_name(image_name, split.is_train())
             if rv.upper() == 'V' and not include_verso:
                 continue
-
+            if data_filter and data_filter.enable:
+                if rv.lower() != data_filter.side.lower():
+                    continue
+                if col.lower() != data_filter.color.lower():
+                    continue
             fragment_ids = fragment.split("_")
             if split.is_val():
                 # Exclude the pairs that has been trained in training mode

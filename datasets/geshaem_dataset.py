@@ -203,7 +203,8 @@ class GeshaemPatch(VisionDataset):
         target_transform: Optional[Callable] = None,
         include_verso=False,
         min_size_limit=112,
-        base_idx=0
+        base_idx=0,
+        data_filter=None
     ) -> None:
         super().__init__(root, transforms, transform, target_transform)
         self._split = split
@@ -212,7 +213,7 @@ class GeshaemPatch(VisionDataset):
         self.fragment_to_group = {}
         self.fragment_to_group_id = {}
 
-        fragments, groups = self.load_dataset(include_verso, min_size_limit, split.is_train())
+        fragments, groups = self.load_dataset(include_verso, min_size_limit, split.is_train(),data_filter)
 
         for idx, group in enumerate(groups):
             if len(group) < 2 and split.is_val():
@@ -249,7 +250,7 @@ class GeshaemPatch(VisionDataset):
         fragment = self.fragments[fragment_id]
         return self.fragment_to_group_id[fragment]
 
-    def load_dataset(self, include_verso, min_size_limit, is_train):
+    def load_dataset(self, include_verso, min_size_limit, is_train, data_filter):
         fragments = {}
         groups = []
         for img_path in sorted(glob.glob(os.path.join(self.root_dir, '**', '*.jpg'), recursive=True)):
@@ -259,6 +260,11 @@ class GeshaemPatch(VisionDataset):
             fragment, rv, col = parse_name(image_name)
             if rv.upper() == 'V' and not include_verso:
                 continue
+            if data_filter and data_filter.enable:
+                if rv.lower() != data_filter.side.lower():
+                    continue
+                if col.lower() != data_filter.color.lower():
+                    continue
 
             fragment_ids = fragment.split("_")
             add_items_to_group(fragment_ids + [fragment], groups)

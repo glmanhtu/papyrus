@@ -80,10 +80,12 @@ class GeshaemTrainer(Trainer):
             return Geshaem(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
         elif data_conf.name == 'geshaem' and data_conf.version == 1:
             split = GeshaemPatch.Split.from_string(mode)
-            return GeshaemPatch(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
+            return GeshaemPatch(data_conf.path, split, transform=transform,
+                                include_verso=data_conf.include_verso, data_filter=data_conf.filter)
         elif data_conf.name == 'geshaem' and data_conf.version == 2:
             split = GeshaemPatchV2.Split.from_string(mode)
-            return GeshaemPatchV2(data_conf.path, split, transform=transform, include_verso=data_conf.include_verso)
+            return GeshaemPatchV2(data_conf.path, split, transform=transform,
+                                  include_verso=data_conf.include_verso, data_filter=data_conf.filter)
         elif data_conf.name == 'michigan':
             return MichiganDataset(data_conf.path, MichiganDataset.Split.from_string(mode), transform)
         else:
@@ -121,12 +123,16 @@ class GeshaemTrainer(Trainer):
     @torch.no_grad()
     def testing(self, mode='test'):
         self._model.eval()
-        dataset = self.load_dataset(mode, self._cfg.data, self.get_transform(mode, self._cfg.data))
+        data_conf = self._cfg.data
+        dataset = self.load_dataset(mode, data_conf, self.get_transform(mode, self._cfg.data))
         self.logger.info(f"Test data size: {len(dataset)}")
 
-        data_loader = self.get_dataloader(mode, dataset, self._cfg.data)
+        data_loader = self.get_dataloader(mode, dataset, data_conf)
         distance_df = self.validate_one_epoch(data_loader, mode)
-        self._tracker.log_table_as_csv(distance_df, 'best_results', 'final_distance_matrix.csv')
+        out_filename = 'final_distance_matrix.csv'
+        if self._cfg.data.filter and self._cfg.data.filter.enable:
+            out_filename = f'{data_conf.filter.color.upper()}{data_conf.filter.side.upper()}_distance_matrix.csv'
+        self._tracker.log_table_as_csv(distance_df, 'best_results', out_filename)
 
     def validate_one_epoch(self, dataloader, mode="validation"):
         batch_time = AverageMeter()

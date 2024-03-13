@@ -9,3 +9,7 @@ include_verso: False
 img_size: 384
 pin_memory: True    # Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.
 num_workers: 4      # Number of data loading threads
+filter:
+  enable: False
+  side: r
+  color: CL
