@@ -4,6 +4,8 @@ exp:
   tracking_uri: ???
   tags:
     project: geshaem
+  save_artifact_to_disk: true
+  local_artifact_dir: output
 
 run:
   name: ss2-im384

@@ -23,6 +23,8 @@ args = parser.parse_args()
 patch_size = args.patch_size
 images = []
 for root, dirs, files in os.walk(args.data_path):
+    if 'cm ruler' in root:
+        continue
     for file in files:
         if file.lower().endswith((".jpg", ".png")):
             images.append(os.path.join(root, file))
