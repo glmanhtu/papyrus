@@ -20,6 +20,9 @@ wget https://huggingface.co/lkeab/hq-sam/resolve/main/sam_hq_vit_tiny.pth
 python3 papyrus_segmentation.py --dataset_path /path/to/dataset --output_path /path/to/output
 cd ..
 ```
+
+At this step, you may want to have a look around the segmented images and filter out some
+incorrect segmented fragments. 
 ### Step 2: Standardization
 Assume the standardized dataset you want to save is `/path/to/standardized`, run the following 
 script to standardize:
@@ -39,6 +42,12 @@ cd ..
 python scripts/generate_michigan_patches.py --data-path /path/to/standardized --output-path /path/to/patches
 ```
 
+### Step 4: Clean up (Optional)
+```bash
+rm -rf /path/to/segmented
+rm -rf /path/to/standardized
+```
+
 ## Training
 Assume that the location of the preprocessed Geshaem dataset is `/path/to/patches`. Run the 
 following script to train the deep learning model:
@@ -53,6 +62,8 @@ Once the model is fully trained, we can generate similarity matrix by running th
 ```bash
 python main.py exp.tracking_uri=file:./output data.path=/path/to/patches run.name=triplet-vitS16-Dt2 data.version=2 data.batch_size=64 data=geshaem model=vit exp.name=Geshaem model.weights=models/model/best mode=test
 ```
+
+Then you can find the similarity matrix in `output/best_results` folder.
 
 Pretrained model can also be downloaded from the release section,
 
