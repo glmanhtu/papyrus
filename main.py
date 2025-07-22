@@ -30,16 +30,20 @@ def dl_main(cfg: DictConfig):
     tracker = MLFlowTracker(cfg.exp.name, cfg.exp.tracking_uri, rank=0, tags=cfg.exp.tags,
                             enabled=cfg.tracking_enable, save_artifact_to_disk=cfg.exp.save_artifact_to_disk,
                             local_artifact_dir=cfg.exp.local_artifact_dir)
-    trainer = GeshaemTrainer(cfg, tracker)
+    trainer = GeshaemTrainer(cfg, tracker, device='cpu')
     with tracker.start_tracking(run_id=cfg.run.run_id, run_name=cfg.run.name, tags=dict(cfg.run.tags)):
-        if cfg.mode == 'eval':
-            trainer.validate()
-        elif cfg.mode == 'test':
-            trainer.testing()
-        elif cfg == 'throughput':
-            trainer.throughput()
-        else:
-            trainer.train()
+        try:
+            if cfg.mode == 'eval':
+                trainer.validate()
+            elif cfg.mode == 'test':
+                trainer.testing()
+            elif cfg == 'throughput':
+                trainer.throughput()
+            else:
+                trainer.train()
+        except Exception as e:
+            trainer.logger.error(e, exc_info=True)
+            raise e
 
         exp_log_dir = os.path.join(cfg.log_dir, cfg.run.name)
         tracker.log_artifacts(exp_log_dir, 'logs')
@@ -115,8 +119,9 @@ class GeshaemTrainer(Trainer):
 
     def get_criterion(self):
         return DistanceLoss(
-            BatchWiseTripletDistanceLoss(distance_fn, margin=self._cfg.train.triplet_margin, reduction='sum'),
-            distance_fn=distance_fn
+            BatchWiseTripletDistanceLoss(distance_fn, margin=self._cfg.train.triplet_margin,
+                                         reduction='sum', device=self.device),
+            distance_fn=distance_fn,
         )
 
     def output_mapping(self, output):
@@ -135,6 +140,7 @@ class GeshaemTrainer(Trainer):
         if self._cfg.data.filter and self._cfg.data.filter.enable:
             out_filename = f'{data_conf.filter.color.upper()}{data_conf.filter.side.upper()}_distance_matrix.csv'
         self._tracker.log_table_as_csv(distance_df, 'best_results', out_filename)
+        distance_df.to_csv(out_filename)
 
     def validate_one_epoch(self, dataloader, mode="validation"):
         batch_time = AverageMeter()
@@ -143,7 +149,7 @@ class GeshaemTrainer(Trainer):
         end = time.time()
         embeddings, labels = [], []
         for idx, (images, targets) in enumerate(dataloader):
-            images = images.cuda(non_blocking=True)
+            images = images.to(self.device, non_blocking=True)
 
             # compute output
             with torch.cuda.amp.autocast(enabled=self._cfg.amp_enable):
@@ -171,7 +177,7 @@ class GeshaemTrainer(Trainer):
             for feature, target in zip(embeddings, labels.numpy()):
                 features.setdefault(target, []).append(feature)
 
-            features = {k: torch.stack(v).cuda() for k, v in features.items()}
+            features = {k: torch.stack(v).to(self.device) for k, v in features.items()}
             distance_df = compute_distance_matrix(features, reduction=self._cfg.eval.distance_reduction,
                                                   distance_fn=criterion.compute_distance)
 
@@ -193,6 +199,7 @@ class GeshaemTrainer(Trainer):
             self.log_metrics({'best_mAP': m_ap, 'best_top1': top1, 'best_prak5': pra5, 'best_prak10': pra10})
             if distance_df is not None:
                 self._tracker.log_table_as_csv(distance_df, 'best_results', 'distance_matrix.csv')
+                distance_df.to_csv('distance_matrix.csv')
 
         self.logger.info(f'Average: \t mAP {m_ap:.4f}\t top1 {top1:.3f}\t pr@k5 {pra5:.3f}\t pr@10 {pra10:3f}')
         return eval_loss
