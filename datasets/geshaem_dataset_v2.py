@@ -88,6 +88,23 @@ def remove_duplicate(fragment_ids, global_keys):
     return [keys[x][0] for x in keys]
 
 
+def tmp_fix_parse_name(img_path: str, is_train: bool):
+    """
+    Temporary fix for parsing image names that do not follow the expected naming convention.
+    :param img_path: Absolute path to the image file.
+    :return: (fragment, rv, col)
+    """
+    image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
+    try:
+        fragment, rv, col = parse_name(image_name, is_train)
+        return fragment, rv, col
+    except ValueError as e:
+        # Fallback for images that do not match the expected naming convention
+        if 'CLR' in img_path:
+            return image_name, 'r', 'cl'
+        else:
+            raise e
+
 
 class GeshaemPatchV2(VisionDataset):
     Target = Union[_Target]
@@ -138,8 +155,7 @@ class GeshaemPatchV2(VisionDataset):
         for idx, fragment in enumerate(self.fragments):
             data, labels = [], []
             for img_path in sorted(fragments[fragment]):
-                image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
-                fragment, rv, col = parse_name(image_name, split.is_train())
+                fragment, rv, col = tmp_fix_parse_name(img_path, split.is_train())
                 if fragment not in self.fragment_to_group:
                     continue
 
@@ -160,8 +176,7 @@ class GeshaemPatchV2(VisionDataset):
         for img_path in sorted(glob.glob(os.path.join(self.root_dir, '**', '*.jpg'), recursive=True)):
             if img_path.split(os.sep)[-3] != 'papyrus':
                 continue
-            image_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(img_path))))
-            fragment, rv, col = parse_name(image_name, split.is_train())
+            fragment, rv, col = tmp_fix_parse_name(img_path, split.is_train())
             if rv.upper() == 'V' and not include_verso:
                 continue
             if data_filter and data_filter.enable:
